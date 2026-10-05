@@ -12,7 +12,7 @@
 #message{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;pointer-events:none;z-index:10}.card{background:rgba(0,0,0,.9);border:1px solid #444;border-radius:18px;padding:22px;width:min(92%,430px);pointer-events:auto}.card h1{margin:0 0 12px;font-size:25px}.card p{color:#ccc;line-height:1.55}.card button{width:100%;margin-top:8px}
 #questionnaire{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:auto;padding:14px;z-index:20;background:rgba(8,10,13,.98)}.question-card{width:min(94%,440px);max-height:100%;overflow:auto;background:#101318;border:1px solid #444;border-radius:18px;padding:20px}.question-card h1{margin:0 0 6px;font-size:23px}.sub{color:#aaa;font-size:12px;line-height:1.5;margin-bottom:15px}.q{margin:14px 0;text-align:left}.q label{display:block;font-size:14px;font-weight:700;margin-bottom:7px}.q select,.q input{width:100%;padding:11px;border-radius:10px;border:1px solid #555;background:#171a1f;color:#fff;font-size:15px}.error{color:#ff6b6b;font-size:12px;min-height:18px;margin-top:6px}.privacy{font-size:11px;color:#888;line-height:1.5;margin-top:10px}
 #modeSelect{position:absolute;inset:0;z-index:30;background:#080a0d;display:flex;align-items:center;justify-content:center;padding:16px}.mode-card{width:min(94%,560px);background:#101318;border:1px solid #3d4249;border-radius:18px;padding:24px;text-align:center}.mode-card h1{margin-top:0}.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}.mode-grid button{min-height:90px}.mode-grid small{display:block;color:#aaa;font-weight:400;margin-top:5px}.note{font-size:12px;color:#929aa4;line-height:1.5;margin-top:14px}
-#monitorPanel{padding:16px}.monitor-layout{display:grid;grid-template-columns:minmax(280px,1.2fr) minmax(260px,.8fr);gap:14px}.panel{background:#101318;border:1px solid #353a41;border-radius:16px;padding:14px}.panel h2{font-size:17px;margin:0 0 10px}.monitor-game{position:relative;height:420px;border:2px solid #343941;border-radius:14px;overflow:hidden;background:#090b0e}.monitor-target{position:absolute;width:64px;height:64px;border-radius:50%;background:#f00;border:4px solid #fff;transform:translate(-50%,-50%);box-shadow:0 0 12px #f00}.thumb-dot{position:absolute;width:16px;height:16px;border-radius:50%;background:#00e676;transform:translate(-50%,-50%);box-shadow:0 0 12px #00e676}.path-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.monitor-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.monitor-stat{background:#171b20;border-radius:10px;padding:10px}.monitor-stat b{display:block;font-size:18px}.monitor-stat span{font-size:11px;color:#9aa3ad}.code{font-size:28px;letter-spacing:5px;font-weight:800;margin:8px 0}.status{font-size:13px;color:#aaa;min-height:20px}
+#monitorPanel{padding:16px}.monitor-layout{display:grid;grid-template-columns:minmax(280px,1.2fr) minmax(260px,.8fr);gap:14px}.panel{background:#101318;border:1px solid #353a41;border-radius:16px;padding:14px}.panel h2{font-size:17px;margin:0 0 10px}.monitor-game{position:relative;height:420px;border:2px solid #343941;border-radius:14px;overflow:hidden;background:#090b0e}.monitor-target{position:absolute;width:64px;height:64px;cursor:pointer;pointer-events:auto;border-radius:50%;background:#f00;border:4px solid #fff;transform:translate(-50%,-50%);box-shadow:0 0 12px #f00}.thumb-dot{position:absolute;width:16px;height:16px;border-radius:50%;background:#00e676;transform:translate(-50%,-50%);box-shadow:0 0 12px #00e676}.path-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.monitor-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.monitor-stat{background:#171b20;border-radius:10px;padding:10px}.monitor-stat b{display:block;font-size:18px}.monitor-stat span{font-size:11px;color:#9aa3ad}.code{font-size:28px;letter-spacing:5px;font-weight:800;margin:8px 0}.status{font-size:13px;color:#aaa;min-height:20px}
 #cameraPanel{position:fixed;right:12px;bottom:50px;width:min(180px,38vw);z-index:15;background:#111;border:1px solid #444;border-radius:12px;padding:6px}.camera-wrap{position:relative}.camera-wrap video{display:block;width:100%;border-radius:8px;transform:scaleX(-1)}#cameraCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1)}.camera-label{font-size:10px;color:#aaa;text-align:center;padding:3px}.tracking-status{font-size:10px;color:#0f0;text-align:center}
 #dataPanel{margin:12px 10px;padding:14px;background:#101318;border:1px solid #353a41;border-radius:16px}.data-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #24282d;font-size:12px}.data-row:last-child{border-bottom:0}.data-row span{color:#9aa3ad}.data-row b{text-align:right}.small{font-size:11px;color:#8f98a2;line-height:1.5}
 #hint{height:36px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;flex-shrink:0}
@@ -75,8 +75,6 @@
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="module">
-import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs";
-
 const GAME_DURATION=20;
 const MODEL_URL="https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 const $=id=>document.getElementById(id);
@@ -107,9 +105,10 @@ async function setupPeerPhone(){
   if(!window.Peer){$('questionError').textContent='PC同期機能の読み込みに失敗しました。ページを再読み込みしてください。';return}
   const id='reflex-'+randomCode(); peer=new Peer(id);
   peer.on('open',id=>{const code=id.replace('reflex-',''); $('trackingStatus').textContent='PCコード '+code});
-  peer.on('connection',c=>{conn=c;conn.on('open',()=>{send({type:'hello',duration:GAME_DURATION});$('trackingStatus').textContent='MediaPipe追跡中・PC接続済み'});conn.on('close',()=>{$('trackingStatus').textContent='PC接続が切れました'});});
+  peer.on('connection',c=>{conn=c;conn.on('open',()=>{send({type:'hello',duration:GAME_DURATION});$('trackingStatus').textContent='MediaPipe追跡中・PC接続済み'});conn.on('data',handlePhoneCommand);conn.on('close',()=>{$('trackingStatus').textContent='PC接続が切れました'});});
   peer.on('error',e=>console.warn(e));
 }
+function handlePhoneCommand(m){if(m&&m.type==='pcHit'){hitTarget();}}
 function setupPeerMonitor(){
   const code=prompt('スマホに表示されている6桁コードを入力してください');
   if(!code||!/^\d{6}$/.test(code)){ $('monitorStatus').textContent='6桁コードが必要です'; return }
@@ -118,6 +117,9 @@ function setupPeerMonitor(){
   peer.on('open',()=>{conn=peer.connect('reflex-'+code);conn.on('open',()=>{$('monitorStatus').textContent='接続しました。スマホ側でゲームを開始してください。'});conn.on('data',handleMonitorData);conn.on('close',()=>{$('monitorStatus').textContent='接続が切れました'});});
   peer.on('error',e=>{$('monitorStatus').textContent='接続エラー: '+e.type});
 }
+function monitorMouseHit(e){e.preventDefault();e.stopPropagation();if(!monitorTarget||monitorTarget.style.display==='none')return;send({type:'pcHit'});}
+monitorTarget.addEventListener('pointerdown',monitorMouseHit);
+monitorTarget.addEventListener('click',monitorMouseHit);
 function handleMonitorData(m){
   if(m.type==='state'){
     $('mTime').textContent=m.time;$('mScore').textContent=m.score;$('mReaction').textContent=m.reaction.toFixed(2)+'s';$('mLevel').textContent=m.level;
@@ -135,6 +137,7 @@ function handleMonitorData(m){
 
 async function setupCamera(){
   try{
+    const { FilesetResolver, HandLandmarker } = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs");
     mediaStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
     camera.srcObject=mediaStream; await camera.play();
     const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
