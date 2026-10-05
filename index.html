@@ -64,6 +64,7 @@ html, body {
     text-align: center;
     pointer-events: none;
 }
+#message button { pointer-events: auto; }
 .card {
     background: rgba(0,0,0,.78);
     border: 1px solid #444;
@@ -274,13 +275,40 @@ function endGame() {
     resultCard.style.display = "block";
 }
 
-target.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    hitTarget();
-});
+let lastTapTime = 0;
 
-startButton.addEventListener("click", startGame);
-restartButton.addEventListener("click", startGame);
+function checkTargetTap(e) {
+    if (!gameRunning) return;
+
+    const now = performance.now();
+    if (now - lastTapTime < 100) return;
+
+    const point = e.touches ? e.touches[0] : e;
+    const rect = target.getBoundingClientRect();
+
+    if (
+        point.clientX >= rect.left &&
+        point.clientX <= rect.right &&
+        point.clientY >= rect.top &&
+        point.clientY <= rect.bottom
+    ) {
+        e.preventDefault();
+        lastTapTime = now;
+        hitTarget();
+    }
+}
+
+gameArea.addEventListener("pointerdown", checkTargetTap);
+gameArea.addEventListener("touchstart", checkTargetTap, { passive: false });
+
+function startGameFromButton(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    startGame();
+}
+
+startButton.addEventListener("pointerdown", startGameFromButton);
+restartButton.addEventListener("pointerdown", startGameFromButton);
 
 updateUI();
 </script>
