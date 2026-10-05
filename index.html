@@ -24,12 +24,12 @@
 <div id="modeSelect">
   <div class="mode-card">
     <h1>卒研 実験システム</h1>
-    <p>スマートフォンでゲームを実施し、PCでは実験者の外部カメラ映像を使った視線・手元の記録とゲーム結果を確認します。</p>
+    <p>スマートフォンでゲームを実施し、MediaPipeで親指の動きを記録します。PCではゲーム状態と親指の軌跡をリアルタイム表示します。</p>
     <div class="mode-grid">
       <button id="phoneMode">📱 スマホ実験<small>外部カメラ・MediaPipe・タップ</small></button>
-      <button id="pcMode" class="secondary">💻 PCモニター<small>ゲーム・視線/軌跡を表示</small></button>
+      <button id="pcMode" class="secondary">💻 PCモニター<small>ゲーム・親指軌跡を表示</small></button>
     </div>
-    <div class="note">PCモニターはスマホ側で発行される6桁コードに接続します。外部カメラは実験者の頭部に装着して、画面を見る方向・視線を意識した記録に使用できます。GitHub PagesのHTTPS上で使用してください。</div>
+    <div class="note">PCモニターはスマホ側で発行される6桁コードに接続します。スマホ側のカメラでMediaPipeによる親指追跡を行います。GitHub PagesのHTTPS上で使用してください。</div>
   </div>
 </div>
 
@@ -63,10 +63,10 @@
 </div>
 <div id="hint">ターゲットをできるだけ速くタップ</div>
 
-<div id="cameraPanel" class="hidden"><div class="camera-wrap"><video id="camera" autoplay playsinline muted></video><canvas id="cameraCanvas"></canvas></div><div class="camera-label">外部カメラ・視線/手元記録</div><div id="trackingStatus" class="tracking-status">準備中</div></div>
+<div id="cameraPanel" class="hidden"><div class="camera-wrap"><video id="camera" autoplay playsinline muted></video><canvas id="cameraCanvas"></canvas></div><div class="camera-label">カメラ・親指追跡</div><div id="trackingStatus" class="tracking-status">準備中</div></div>
 
 <div id="monitorPanel" class="hidden">
-  <div class="panel"><h2>PCモニター接続</h2><div class="small">※外部カメラを実験者の頭部に装着する場合、このカメラは「見ている方向・画面上の注視位置を確認するための映像記録」として使用します。カメラが目そのものを撮影しない場合、MediaPipeだけで眼球の視線角度を直接測定することはできません。</div><div>スマホ画面に表示されたコード：</div><div id="monitorCode" class="code">------</div><div id="monitorStatus" class="status">接続待ち</div><button id="monitorBack" class="secondary">戻る</button></div>
+  <div class="panel"><h2>PCモニター接続</h2><div class="small">スマホのカメラを使ってMediaPipeで親指の位置を取得し、ゲーム中の親指軌跡を記録します。</div><div>スマホ画面に表示されたコード：</div><div id="monitorCode" class="code">------</div><div id="monitorStatus" class="status">接続待ち</div><button id="monitorBack" class="secondary">戻る</button></div>
   <div class="monitor-layout" style="margin-top:14px">
     <div class="panel"><h2>ゲーム画面</h2><div id="monitorGame" class="monitor-game"><div id="monitorTarget" class="monitor-target" style="display:none"></div><svg id="pathSvg" class="path-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline id="pathLine" points="" fill="none" stroke="#00e676" stroke-width="1.2"/></svg><div id="thumbDot" class="thumb-dot" style="display:none"></div></div></div>
     <div class="panel"><h2>リアルタイム計測</h2><div class="monitor-stats"><div class="monitor-stat"><span>TIME</span><b id="mTime">20</b></div><div class="monitor-stat"><span>SCORE</span><b id="mScore">0</b></div><div class="monitor-stat"><span>REACTION</span><b id="mReaction">0.00s</b></div><div class="monitor-stat"><span>LEVEL</span><b id="mLevel">BEGINNER</b></div></div><h2 style="margin-top:18px">現在のターゲット</h2><div class="small" id="mTargetInfo">待機中</div><h2 style="margin-top:18px">軌跡</h2><div class="small" id="mPathInfo">0 points</div></div>
