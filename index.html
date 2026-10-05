@@ -97,14 +97,17 @@ function randomCode(){return String(Math.floor(100000+Math.random()*900000))}
 
 function resetGameView(){startCard.classList.remove('hidden');resultCard.classList.add('hidden');target.style.display='none';questionnaire.style.display='flex'}
 
-$('phoneMode').addEventListener('click',async()=>{mode='phone';modeSelect.classList.add('hidden');$('top').classList.remove('hidden');$('game').classList.remove('hidden');questionnaire.style.display='flex';await setupPeerPhone();await setupCamera();});
+$('phoneMode').addEventListener('click',async()=>{mode='phone';modeSelect.classList.add('hidden');$('top').classList.remove('hidden');$('game').classList.remove('hidden');questionnaire.style.display='flex';cameraPanel.classList.remove('hidden');$('phoneCode').textContent=randomCode();$('trackingStatus').textContent='この6桁コードをPCモニターに入力してください';await setupPeerPhone();await setupCamera();});
 $('pcMode').addEventListener('click',()=>{mode='pc';modeSelect.classList.add('hidden');$('top').classList.add('hidden');$('game').classList.add('hidden');$('hint').classList.add('hidden');monitorPanel.classList.remove('hidden');setupPeerMonitor();});
 $('monitorBack').addEventListener('click',()=>location.reload());
 
 async function setupPeerPhone(){
-  if(!window.Peer){$('questionError').textContent='PC同期機能の読み込みに失敗しました。ページを再読み込みしてください。';return}
-  const id='reflex-'+randomCode(); peer=new Peer(id);
-  peer.on('open',id=>{const code=id.replace('reflex-',''); $('phoneCode').textContent=code; $('trackingStatus').textContent='PCモニターにこの6桁コードを入力してください';});
+  const displayedCode=$('phoneCode').textContent;
+  if(!window.Peer){$('trackingStatus').textContent='6桁コードは表示中（PC接続機能のみ読み込み失敗）';return}
+  if(!/^\d{6}$/.test(displayedCode)) $('phoneCode').textContent=randomCode();
+  const code=$('phoneCode').textContent;
+  const id='reflex-'+code; peer=new Peer(id);
+  peer.on('open',id=>{ $('phoneCode').textContent=id.replace('reflex-',''); $('trackingStatus').textContent='PCモニターにこの6桁コードを入力してください';});
   peer.on('connection',c=>{conn=c;conn.on('open',()=>{send({type:'hello',duration:GAME_DURATION});$('trackingStatus').textContent='PC接続済み・MediaPipe追跡中'});conn.on('data',handlePhoneCommand);conn.on('close',()=>{$('trackingStatus').textContent='PC接続が切れました'});});
   peer.on('error',e=>console.warn(e));
 }
@@ -172,7 +175,7 @@ function questionnaireSubmit(e){e.preventDefault();e.stopPropagation();const req
 qButton.addEventListener('pointerdown',questionnaireSubmit);
 
 function generateTarget(){const r=game.getBoundingClientRect(),margin=48;const x=margin+Math.random()*Math.max(1,r.width-margin*2),y=margin+Math.random()*Math.max(1,r.height-margin*2);target.style.left=x+'px';target.style.top=y+'px';target.style.display='block';targetId++;currentPath=[];lastPathSample=0;spawnTime=performance.now();send({type:'state',time:Math.max(0,Math.ceil(GAME_DURATION-(spawnTime-startTime)/1000)),score,reaction:avg(),level:level(),targetVisible:true,target:{id:targetId,x:x/r.width,y:y/r.height}});}
-function startGame(){score=0;reactionTimes=[];records=[];startTime=performance.now();gameRunning=true;startCard.classList.add('hidden');resultCard.classList.add('hidden');ui();generateTarget();send({type:'event',text:'GAME START'});clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
+function startGame(){score=0;reactionTimes=[];records=[];startTime=performance.now();gameRunning=true;startCard.classList.add('hidden');resultCard.classList.add('hidden');if($('codeBox')) $('codeBox').style.display='none';ui();generateTarget();send({type:'event',text:'GAME START'});clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
 function hitTarget(){if(!gameRunning)return;const tap=performance.now(),reaction=(tap-spawnTime)/1000;reactionTimes.push(reaction);score++;const r=game.getBoundingClientRect();const tx=parseFloat(target.style.left),ty=parseFloat(target.style.top);records.push({targetId,reactionTime:reaction,targetX:tx/r.width,targetY:ty/r.height,path:currentPath.slice(),pathPointCount:currentPath.length});target.classList.add('hit');setTimeout(()=>target.classList.remove('hit'),70);send({type:'event',text:'TARGET #'+targetId+' HIT / reaction '+reaction.toFixed(3)+'s',record:records[records.length-1]});ui();generateTarget();}
 function checkTap(e){if(!gameRunning)return;const now=performance.now();if(now-lastTapTime<100)return;const p=e.touches?.[0]||e,r=target.getBoundingClientRect();if(p.clientX>=r.left&&p.clientX<=r.right&&p.clientY>=r.top&&p.clientY<=r.bottom){if(e.cancelable)e.preventDefault();lastTapTime=now;hitTarget()}}
 target.addEventListener('pointerdown',checkTap);target.addEventListener('click',checkTap);game.addEventListener('pointerdown',checkTap);game.addEventListener('click',checkTap);game.addEventListener('touchstart',checkTap,{passive:false});
