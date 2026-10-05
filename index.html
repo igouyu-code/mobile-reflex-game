@@ -63,7 +63,7 @@
 </div>
 <div id="hint">ターゲットをできるだけ速くタップ</div>
 
-<div id="cameraPanel" class="hidden"><div class="camera-wrap"><video id="camera" autoplay playsinline muted></video><canvas id="cameraCanvas"></canvas></div><div class="camera-label">カメラ・親指追跡</div><div id="trackingStatus" class="tracking-status">準備中</div></div>
+<div id="cameraPanel" class="hidden"><div class="camera-wrap"><video id="camera" autoplay playsinline muted></video><canvas id="cameraCanvas"></canvas></div><div class="camera-label">カメラ・親指追跡</div><div id="codeBox" style="margin:10px 0;padding:12px;border-radius:12px;background:#171b22;border:2px solid #00d9ff;text-align:center"><div style="font-size:13px;color:#aaa">PCモニター接続用 6桁コード</div><div id="phoneCode" style="font-size:32px;font-weight:800;letter-spacing:6px;color:#00d9ff">------</div><div style="font-size:12px;color:#aaa;margin-top:4px">この数字をPCモニターに入力してください</div></div><div id="trackingStatus" class="tracking-status">準備中</div></div>
 
 <div id="monitorPanel" class="hidden">
   <div class="panel"><h2>PCモニター接続</h2><div class="small">スマホのカメラを使ってMediaPipeで親指の位置を取得し、ゲーム中の親指軌跡を記録します。</div><div>スマホ画面に表示されたコード：</div><div id="monitorCode" class="code">------</div><div id="monitorStatus" class="status">接続待ち</div><button id="monitorBack" class="secondary">戻る</button></div>
@@ -104,8 +104,8 @@ $('monitorBack').addEventListener('click',()=>location.reload());
 async function setupPeerPhone(){
   if(!window.Peer){$('questionError').textContent='PC同期機能の読み込みに失敗しました。ページを再読み込みしてください。';return}
   const id='reflex-'+randomCode(); peer=new Peer(id);
-  peer.on('open',id=>{const code=id.replace('reflex-',''); $('trackingStatus').textContent='PCコード '+code});
-  peer.on('connection',c=>{conn=c;conn.on('open',()=>{send({type:'hello',duration:GAME_DURATION});$('trackingStatus').textContent='MediaPipe追跡中・PC接続済み'});conn.on('data',handlePhoneCommand);conn.on('close',()=>{$('trackingStatus').textContent='PC接続が切れました'});});
+  peer.on('open',id=>{const code=id.replace('reflex-',''); $('phoneCode').textContent=code; $('trackingStatus').textContent='PCモニターにこの6桁コードを入力してください';});
+  peer.on('connection',c=>{conn=c;conn.on('open',()=>{send({type:'hello',duration:GAME_DURATION});$('trackingStatus').textContent='PC接続済み・MediaPipe追跡中'});conn.on('data',handlePhoneCommand);conn.on('close',()=>{$('trackingStatus').textContent='PC接続が切れました'});});
   peer.on('error',e=>console.warn(e));
 }
 function handlePhoneCommand(m){if(m&&m.type==='pcHit'){hitTarget();}}
