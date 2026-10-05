@@ -2,522 +2,189 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mobile E-sports Reflex Game</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>E-Sports Reflex Research System</title>
 <style>
-* { box-sizing: border-box; }
-html, body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #090909;
-    color: white;
-    font-family: Arial, sans-serif;
-    touch-action: manipulation;
-}
-#app {
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-#top {
-    height: 62px;
-    background: #151515;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    flex-shrink: 0;
-}
-.stat { text-align: center; min-width: 25%; }
-.label { font-size: 11px; color: #aaa; }
-.value { font-size: 21px; font-weight: bold; margin-top: 2px; }
-#game {
-    position: relative;
-    flex: 1;
-    margin: 10px;
-    border: 2px solid #333;
-    border-radius: 16px;
-    overflow: hidden;
-    background:
-      radial-gradient(circle at center, #1b1b1b 0%, #0b0b0b 65%);
-}
-#target {
-    position: absolute;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: red;
-    border: 4px solid white;
-    box-shadow: 0 0 12px red, 0 0 30px rgba(255,0,0,.45);
-    transform: translate(-50%, -50%);
-    display: none;
-}
-#target:active { transform: translate(-50%, -50%) scale(.9); }
-#message {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    pointer-events: none;
-}
-#message button { pointer-events: auto; }
-.card {
-    background: rgba(0,0,0,.78);
-    border: 1px solid #444;
-    border-radius: 18px;
-    padding: 24px;
-    width: min(90%, 390px);
-}
-.card h1 { margin: 0 0 12px; font-size: 25px; }
-.card p { color: #ccc; line-height: 1.6; }
-button {
-    border: 0;
-    border-radius: 12px;
-    padding: 15px 30px;
-    font-size: 18px;
-    font-weight: bold;
-    background: #1683ff;
-    color: white;
-}
-button:active { transform: scale(.97); }
-#questionnaire {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow-y: auto;
-    padding: 14px;
-    z-index: 20;
-    background: rgba(9,9,9,.97);
-}
-.question-card {
-    width: min(94%, 430px);
-    max-height: 100%;
-    overflow-y: auto;
-    background: rgba(0,0,0,.92);
-    border: 1px solid #444;
-    border-radius: 18px;
-    padding: 20px;
-}
-.question-card h1 { margin: 0 0 6px; font-size: 23px; }
-.question-card .sub { color: #aaa; font-size: 12px; line-height: 1.5; margin-bottom: 16px; }
-.q { margin: 14px 0; text-align: left; }
-.q .title { display:block; font-size:14px; font-weight:bold; margin-bottom:7px; }
-.q select {
-    width: 100%; padding: 11px; border-radius: 10px; border: 1px solid #555;
-    background: #171717; color: white; font-size: 15px;
-}
-.q input[type="text"] {
-    width: 100%; padding: 11px; border-radius: 10px; border: 1px solid #555;
-    background: #171717; color: white; font-size: 15px;
-}
-.q small { color:#888; display:block; margin-top:5px; }
-#questionnaire button { width:100%; margin-top:8px; }
-#questionnaire .privacy { font-size:11px; color:#888; line-height:1.5; margin-top:10px; }
-#questionnaire .error { color:#ff6b6b; font-size:12px; min-height:18px; margin-top:6px; }
-#downloadDataButton { background:#333; margin-top:10px; }
-#result { display: none; }
-#hint {
-    height: 36px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #aaa;
-    font-size: 12px;
-    flex-shrink: 0;
-}
-.green { color: #00ff66; }
-.yellow { color: #00ffff; }
-.orange { color: #ff8c00; }
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#080a0d;color:#fff;font-family:Arial,"Noto Sans JP",sans-serif;touch-action:manipulation}body{overflow:auto}button,select,input{font:inherit}button{border:0;border-radius:12px;padding:13px 20px;font-weight:700;background:#1683ff;color:#fff;min-height:46px;cursor:pointer}button.secondary{background:#333}button:disabled{opacity:.5;cursor:not-allowed}.hidden{display:none!important}
+#app{min-height:100vh;display:flex;flex-direction:column}#top{height:64px;background:#15181d;display:flex;align-items:center;justify-content:space-around;flex-shrink:0}.stat{text-align:center;min-width:25%}.label{font-size:10px;color:#9aa3ad}.value{font-size:20px;font-weight:700;margin-top:2px}.green{color:#00e676}.yellow{color:#00d9ff}.orange{color:#ff9800}
+#game{position:relative;min-height:calc(100vh - 100px);margin:10px;border:2px solid #30343a;border-radius:16px;overflow:hidden;background:radial-gradient(circle at center,#1a1e23 0%,#090b0e 70%)}
+#target{position:absolute;width:64px;height:64px;border-radius:50%;background:#f00;border:4px solid #fff;box-shadow:0 0 12px #f00,0 0 30px rgba(255,0,0,.45);transform:translate(-50%,-50%);display:none;z-index:4;pointer-events:none}#target.hit{transform:translate(-50%,-50%) scale(.88)}
+#message{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;pointer-events:none;z-index:10}.card{background:rgba(0,0,0,.9);border:1px solid #444;border-radius:18px;padding:22px;width:min(92%,430px);pointer-events:auto}.card h1{margin:0 0 12px;font-size:25px}.card p{color:#ccc;line-height:1.55}.card button{width:100%;margin-top:8px}
+#questionnaire{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:auto;padding:14px;z-index:20;background:rgba(8,10,13,.98)}.question-card{width:min(94%,440px);max-height:100%;overflow:auto;background:#101318;border:1px solid #444;border-radius:18px;padding:20px}.question-card h1{margin:0 0 6px;font-size:23px}.sub{color:#aaa;font-size:12px;line-height:1.5;margin-bottom:15px}.q{margin:14px 0;text-align:left}.q label{display:block;font-size:14px;font-weight:700;margin-bottom:7px}.q select,.q input{width:100%;padding:11px;border-radius:10px;border:1px solid #555;background:#171a1f;color:#fff;font-size:15px}.error{color:#ff6b6b;font-size:12px;min-height:18px;margin-top:6px}.privacy{font-size:11px;color:#888;line-height:1.5;margin-top:10px}
+#modeSelect{position:absolute;inset:0;z-index:30;background:#080a0d;display:flex;align-items:center;justify-content:center;padding:16px}.mode-card{width:min(94%,560px);background:#101318;border:1px solid #3d4249;border-radius:18px;padding:24px;text-align:center}.mode-card h1{margin-top:0}.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}.mode-grid button{min-height:90px}.mode-grid small{display:block;color:#aaa;font-weight:400;margin-top:5px}.note{font-size:12px;color:#929aa4;line-height:1.5;margin-top:14px}
+#monitorPanel{padding:16px}.monitor-layout{display:grid;grid-template-columns:minmax(280px,1.2fr) minmax(260px,.8fr);gap:14px}.panel{background:#101318;border:1px solid #353a41;border-radius:16px;padding:14px}.panel h2{font-size:17px;margin:0 0 10px}.monitor-game{position:relative;height:420px;border:2px solid #343941;border-radius:14px;overflow:hidden;background:#090b0e}.monitor-target{position:absolute;width:64px;height:64px;border-radius:50%;background:#f00;border:4px solid #fff;transform:translate(-50%,-50%);box-shadow:0 0 12px #f00}.thumb-dot{position:absolute;width:16px;height:16px;border-radius:50%;background:#00e676;transform:translate(-50%,-50%);box-shadow:0 0 12px #00e676}.path-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.monitor-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.monitor-stat{background:#171b20;border-radius:10px;padding:10px}.monitor-stat b{display:block;font-size:18px}.monitor-stat span{font-size:11px;color:#9aa3ad}.code{font-size:28px;letter-spacing:5px;font-weight:800;margin:8px 0}.status{font-size:13px;color:#aaa;min-height:20px}
+#cameraPanel{position:fixed;right:12px;bottom:50px;width:min(180px,38vw);z-index:15;background:#111;border:1px solid #444;border-radius:12px;padding:6px}.camera-wrap{position:relative}.camera-wrap video{display:block;width:100%;border-radius:8px;transform:scaleX(-1)}#cameraCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1)}.camera-label{font-size:10px;color:#aaa;text-align:center;padding:3px}.tracking-status{font-size:10px;color:#0f0;text-align:center}
+#dataPanel{margin:12px 10px;padding:14px;background:#101318;border:1px solid #353a41;border-radius:16px}.data-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #24282d;font-size:12px}.data-row:last-child{border-bottom:0}.data-row span{color:#9aa3ad}.data-row b{text-align:right}.small{font-size:11px;color:#8f98a2;line-height:1.5}
+#hint{height:36px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;flex-shrink:0}
+@media(max-width:700px){.monitor-layout{grid-template-columns:1fr}.mode-grid{grid-template-columns:1fr}.monitor-game{height:300px}#cameraPanel{width:130px}}
 </style>
 </head>
-
 <body>
 <div id="app">
-    <div id="top">
-        <div class="stat">
-            <div class="label">TIME</div>
-            <div id="time" class="value yellow">20</div>
-        </div>
-        <div class="stat">
-            <div class="label">SCORE</div>
-            <div id="score" class="value green">0</div>
-        </div>
-        <div class="stat">
-            <div class="label">REACTION</div>
-            <div id="reaction" class="value">0.00s</div>
-        </div>
-        <div class="stat">
-            <div class="label">LEVEL</div>
-            <div id="level" class="value orange">BEGINNER</div>
-        </div>
+<div id="modeSelect">
+  <div class="mode-card">
+    <h1>卒研 実験システム</h1>
+    <p>スマートフォンでゲーム＋親指追跡、PCでは同じゲーム画面と軌跡を表示できます。</p>
+    <div class="mode-grid">
+      <button id="phoneMode">📱 スマホ実験<small>カメラ・MediaPipe・タップ</small></button>
+      <button id="pcMode" class="secondary">💻 PCモニター<small>ゲーム・軌跡を表示</small></button>
     </div>
-
-    <div id="game">
-        <div id="target"></div>
-
-        <div id="questionnaire">
-            <div class="question-card">
-                <h1>実験前アンケート</h1>
-                <div class="sub">
-                    卒業研究の実験に使用します。氏名・住所など、個人を特定できる情報は入力しないでください。<br>
-                    回答後、「ゲームへ進む」を押してください。
-                </div>
-
-                <div class="q">
-                    <label class="title" for="ageGroup">1. 年齢</label>
-                    <select id="ageGroup">
-                        <option value="">選択してください</option>
-                        <option>18歳未満</option>
-                        <option>18～20歳</option>
-                        <option>21～23歳</option>
-                        <option>24～29歳</option>
-                        <option>30歳以上</option>
-                        <option>回答しない</option>
-                    </select>
-                </div>
-
-                <div class="q">
-                    <label class="title" for="handedness">2. 利き手</label>
-                    <select id="handedness">
-                        <option value="">選択してください</option>
-                        <option>右手</option>
-                        <option>左手</option>
-                        <option>両利き</option>
-                        <option>回答しない</option>
-                    </select>
-                </div>
-
-                <div class="q">
-                    <label class="title" for="dailyGame">3. 1日のゲーム時間</label>
-                    <select id="dailyGame">
-                        <option value="">選択してください</option>
-                        <option>ほとんどしない</option>
-                        <option>30分未満</option>
-                        <option>30分～1時間</option>
-                        <option>1～2時間</option>
-                        <option>2～4時間</option>
-                        <option>4時間以上</option>
-                    </select>
-                </div>
-
-                <div class="q">
-                    <label class="title" for="smartphoneGame">4. スマートフォンゲームのプレイ頻度</label>
-                    <select id="smartphoneGame">
-                        <option value="">選択してください</option>
-                        <option>ほとんどしない</option>
-                        <option>月に数回</option>
-                        <option>週に1～2回</option>
-                        <option>週に3～6回</option>
-                        <option>ほぼ毎日</option>
-                    </select>
-                </div>
-
-                <div class="q">
-                    <label class="title" for="gameExperience">5. E-Sports・アクションゲームの経験</label>
-                    <select id="gameExperience">
-                        <option value="">選択してください</option>
-                        <option>ほとんどない</option>
-                        <option>少しある</option>
-                        <option>普通</option>
-                        <option>よくプレイする</option>
-                        <option>非常によくプレイする</option>
-                    </select>
-                </div>
-
-                <div class="q">
-                    <label class="title" for="favoriteGame">6. 普段プレイしているゲーム（任意）</label>
-                    <input id="favoriteGame" type="text" maxlength="80" placeholder="例：HOK、PUBG、APEXなど">
-                </div>
-
-                <div id="questionError" class="error"></div>
-                <button id="questionnaireButton">ゲームへ進む</button>
-                <div class="privacy">※アンケート回答は、このページ上で実験データと一緒に記録できます。外部サービスへ自動送信はしません。</div>
-            </div>
-        </div>
-
-
-        <div id="message">
-            <div id="startCard" class="card">
-                <h1>REFLEX GAME</h1>
-                <p>
-                    赤いターゲットが表示されたら<br>
-                    できるだけ早くタップしてください。<br>
-                    制限時間は20秒です。
-                </p>
-                <button id="startButton">START</button>
-            </div>
-
-            <div id="result" class="card">
-                <h1>RESULT</h1>
-                <p>SCORE</p>
-                <div id="finalScore" style="font-size:36px;font-weight:bold;color:#00ff66;">0</div>
-                <p>AVERAGE REACTION</p>
-                <div id="finalAvg" style="font-size:30px;color:#00ffff;">0.00s</div>
-                <p>LEVEL</p>
-                <div id="finalLevel" style="font-size:28px;color:#ff8c00;">BEGINNER</div>
-                <br>
-                <button id="downloadDataButton">実験データを保存（CSV）</button>
-                <button id="restartButton">PLAY AGAIN</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="hint">ターゲットをできるだけ速くタップ</div>
+    <div class="note">PCモニターはスマホ側で発行される6桁コードに接続します。GitHub PagesのHTTPS上で使用してください。</div>
+  </div>
 </div>
 
-<script>
-const GAME_DURATION = 20;
-const target = document.getElementById("target");
-const gameArea = document.getElementById("game");
+<div id="top">
+  <div class="stat"><div class="label">TIME</div><div id="time" class="value yellow">20</div></div>
+  <div class="stat"><div class="label">SCORE</div><div id="score" class="value green">0</div></div>
+  <div class="stat"><div class="label">REACTION</div><div id="reaction" class="value">0.00s</div></div>
+  <div class="stat"><div class="label">LEVEL</div><div id="level" class="value orange">BEGINNER</div></div>
+</div>
 
-const timeEl = document.getElementById("time");
-const scoreEl = document.getElementById("score");
-const reactionEl = document.getElementById("reaction");
-const levelEl = document.getElementById("level");
+<div id="game">
+  <div id="questionnaire">
+    <div class="question-card">
+      <h1>実験前アンケート</h1>
+      <div class="sub">卒業研究の実験に使用します。氏名・住所など個人を特定できる情報は入力しないでください。</div>
+      <div class="q"><label for="ageGroup">1. 年齢</label><select id="ageGroup"><option value="">選択してください</option><option>18歳未満</option><option>18～20歳</option><option>21～23歳</option><option>24～29歳</option><option>30歳以上</option><option>回答しない</option></select></div>
+      <div class="q"><label for="handedness">2. 利き手</label><select id="handedness"><option value="">選択してください</option><option>右手</option><option>左手</option><option>両利き</option><option>回答しない</option></select></div>
+      <div class="q"><label for="dailyGame">3. 1日のゲーム時間</label><select id="dailyGame"><option value="">選択してください</option><option>ほとんどしない</option><option>30分未満</option><option>30分～1時間</option><option>1～2時間</option><option>2～4時間</option><option>4時間以上</option></select></div>
+      <div class="q"><label for="smartphoneGame">4. スマートフォンゲームのプレイ頻度</label><select id="smartphoneGame"><option value="">選択してください</option><option>ほとんどしない</option><option>月に数回</option><option>週に1～2回</option><option>週に3～6回</option><option>ほぼ毎日</option></select></div>
+      <div class="q"><label for="gameExperience">5. E-Sports・アクションゲームの経験</label><select id="gameExperience"><option value="">選択してください</option><option>ほとんどない</option><option>少しある</option><option>普通</option><option>よくプレイする</option><option>非常によくプレイする</option></select></div>
+      <div class="q"><label for="favoriteGame">6. 普段プレイしているゲーム（任意）</label><input id="favoriteGame" maxlength="80" placeholder="例：HOK、PUBG、APEXなど"></div>
+      <div id="questionError" class="error"></div><button id="questionnaireButton">ゲームへ進む</button>
+      <div class="privacy">※このページは実験データを端末内でまとめます。PCとの通信は実験中の表示同期に使用します。</div>
+    </div>
+  </div>
+  <div id="target"></div>
+  <div id="message">
+    <div id="startCard" class="card hidden"><h1>REFLEX GAME</h1><p>赤いターゲットが表示されたら、できるだけ早くタップしてください。<br>制限時間は20秒です。</p><button id="startButton">START</button></div>
+    <div id="result" class="card hidden"><h1>RESULT</h1><p>SCORE</p><div id="finalScore" style="font-size:36px;font-weight:bold;color:#00e676">0</div><p>AVERAGE REACTION</p><div id="finalAvg" style="font-size:30px;color:#00d9ff">0.00s</div><p>LEVEL</p><div id="finalLevel" style="font-size:28px;color:#ff9800">BEGINNER</div><button id="downloadDataButton">実験データを保存（CSV）</button><button id="restartButton" class="secondary">PLAY AGAIN</button></div>
+  </div>
+</div>
+<div id="hint">ターゲットをできるだけ速くタップ</div>
 
-const startCard = document.getElementById("startCard");
-const resultCard = document.getElementById("result");
-const startButton = document.getElementById("startButton");
-const restartButton = document.getElementById("restartButton");
-const downloadDataButton = document.getElementById("downloadDataButton");
+<div id="cameraPanel" class="hidden"><div class="camera-wrap"><video id="camera" autoplay playsinline muted></video><canvas id="cameraCanvas"></canvas></div><div class="camera-label">MediaPipe 親指追跡</div><div id="trackingStatus" class="tracking-status">準備中</div></div>
 
-const questionnaire = document.getElementById("questionnaire");
-const questionnaireButton = document.getElementById("questionnaireButton");
-const questionError = document.getElementById("questionError");
-const ageGroupEl = document.getElementById("ageGroup");
-const handednessEl = document.getElementById("handedness");
-const dailyGameEl = document.getElementById("dailyGame");
-const smartphoneGameEl = document.getElementById("smartphoneGame");
-const gameExperienceEl = document.getElementById("gameExperience");
-const favoriteGameEl = document.getElementById("favoriteGame");
+<div id="monitorPanel" class="hidden">
+  <div class="panel"><h2>PCモニター接続</h2><div>スマホ画面に表示されたコード：</div><div id="monitorCode" class="code">------</div><div id="monitorStatus" class="status">接続待ち</div><button id="monitorBack" class="secondary">戻る</button></div>
+  <div class="monitor-layout" style="margin-top:14px">
+    <div class="panel"><h2>ゲーム画面</h2><div id="monitorGame" class="monitor-game"><div id="monitorTarget" class="monitor-target" style="display:none"></div><svg id="pathSvg" class="path-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline id="pathLine" points="" fill="none" stroke="#00e676" stroke-width="1.2"/></svg><div id="thumbDot" class="thumb-dot" style="display:none"></div></div></div>
+    <div class="panel"><h2>リアルタイム計測</h2><div class="monitor-stats"><div class="monitor-stat"><span>TIME</span><b id="mTime">20</b></div><div class="monitor-stat"><span>SCORE</span><b id="mScore">0</b></div><div class="monitor-stat"><span>REACTION</span><b id="mReaction">0.00s</b></div><div class="monitor-stat"><span>LEVEL</span><b id="mLevel">BEGINNER</b></div></div><h2 style="margin-top:18px">現在のターゲット</h2><div class="small" id="mTargetInfo">待機中</div><h2 style="margin-top:18px">軌跡</h2><div class="small" id="mPathInfo">0 points</div></div>
+  </div>
+</div>
 
-let questionnaireData = {};
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script type="module">
+import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs";
 
-const finalScore = document.getElementById("finalScore");
-const finalAvg = document.getElementById("finalAvg");
-const finalLevel = document.getElementById("finalLevel");
+const GAME_DURATION=20;
+const MODEL_URL="https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const $=id=>document.getElementById(id);
+const target=$('target'), game=$('game');
+const questionnaire=$('questionnaire'), modeSelect=$('modeSelect');
+const startCard=$('startCard'), resultCard=$('result');
+const startButton=$('startButton'), restartButton=$('restartButton');
+const qButton=$('questionnaireButton'), downloadButton=$('downloadDataButton');
+const cameraPanel=$('cameraPanel'), camera=$('camera'), cameraCanvas=$('cameraCanvas'), trackingStatus=$('trackingStatus');
+const monitorPanel=$('monitorPanel'), monitorGame=$('monitorGame'), monitorTarget=$('monitorTarget'), thumbDot=$('thumbDot'), pathLine=$('pathLine');
+let mode=null, peer=null, conn=null, handLandmarker=null, mediaStream=null, tracking=false, lastVideoTime=-1;
+let score=0,reactionTimes=[],records=[],startTime=0,spawnTime=0,gameRunning=false,timerId=null,targetId=0,currentPath=[],lastThumb=null,lastPathSample=0,lastTapTime=0;
+let qData={};
 
-let score = 0;
-let reactionTimes = [];
-let startTime = 0;
-let spawnTime = 0;
-let gameRunning = false;
-let timerId = null;
+function avg(){return reactionTimes.length?reactionTimes.reduce((a,b)=>a+b,0)/reactionTimes.length:0}
+function level(){const a=avg();return a<.30?'PRO':a<.55?'INTERMEDIATE':'BEGINNER'}
+function ui(){ $('score').textContent=score;$('reaction').textContent=avg().toFixed(2)+'s';$('level').textContent=level();$('time').textContent=Math.max(0,Math.ceil(GAME_DURATION-(performance.now()-startTime)/1000)); }
+function send(msg){if(conn&&conn.open)conn.send(msg)}
+function randomCode(){return String(Math.floor(100000+Math.random()*900000))}
 
-function averageReaction() {
-    if (reactionTimes.length === 0) return 0;
-    return reactionTimes.reduce((a,b) => a+b, 0) / reactionTimes.length;
+function resetGameView(){startCard.classList.remove('hidden');resultCard.classList.add('hidden');target.style.display='none';questionnaire.style.display='flex'}
+
+$('phoneMode').addEventListener('click',async()=>{mode='phone';modeSelect.classList.add('hidden');$('top').classList.remove('hidden');$('game').classList.remove('hidden');questionnaire.style.display='flex';await setupPeerPhone();await setupCamera();});
+$('pcMode').addEventListener('click',()=>{mode='pc';modeSelect.classList.add('hidden');$('top').classList.add('hidden');$('game').classList.add('hidden');$('hint').classList.add('hidden');monitorPanel.classList.remove('hidden');setupPeerMonitor();});
+$('monitorBack').addEventListener('click',()=>location.reload());
+
+async function setupPeerPhone(){
+  if(!window.Peer){$('questionError').textContent='PC同期機能の読み込みに失敗しました。ページを再読み込みしてください。';return}
+  const id='reflex-'+randomCode(); peer=new Peer(id);
+  peer.on('open',id=>{const code=id.replace('reflex-',''); $('trackingStatus').textContent='PCコード '+code});
+  peer.on('connection',c=>{conn=c;conn.on('open',()=>{send({type:'hello',duration:GAME_DURATION});$('trackingStatus').textContent='MediaPipe追跡中・PC接続済み'});conn.on('close',()=>{$('trackingStatus').textContent='PC接続が切れました'});});
+  peer.on('error',e=>console.warn(e));
+}
+function setupPeerMonitor(){
+  const code=prompt('スマホに表示されている6桁コードを入力してください');
+  if(!code||!/^\d{6}$/.test(code)){ $('monitorStatus').textContent='6桁コードが必要です'; return }
+  $('monitorCode').textContent=code;
+  peer=new Peer();
+  peer.on('open',()=>{conn=peer.connect('reflex-'+code);conn.on('open',()=>{$('monitorStatus').textContent='接続しました。スマホ側でゲームを開始してください。'});conn.on('data',handleMonitorData);conn.on('close',()=>{$('monitorStatus').textContent='接続が切れました'});});
+  peer.on('error',e=>{$('monitorStatus').textContent='接続エラー: '+e.type});
+}
+function handleMonitorData(m){
+  if(m.type==='state'){
+    $('mTime').textContent=m.time;$('mScore').textContent=m.score;$('mReaction').textContent=m.reaction.toFixed(2)+'s';$('mLevel').textContent=m.level;
+    monitorTarget.style.display=m.targetVisible?'block':'none';monitorTarget.style.left=(m.target.x*100)+'%';monitorTarget.style.top=(m.target.y*100)+'%';
+    $('mTargetInfo').textContent='Target #'+m.target.id+' / x='+m.target.x.toFixed(3)+' y='+m.target.y.toFixed(3);
+  } else if(m.type==='thumb'){
+    thumbDot.style.display='block';thumbDot.style.left=(m.x*100)+'%';thumbDot.style.top=(m.y*100)+'%';
+    $('mPathInfo').textContent=m.count+' points / Target #'+m.targetId;
+    pathLine.setAttribute('points',m.path.map(p=>(p.x*100).toFixed(2)+','+(p.y*100).toFixed(2)).join(' '));
+  } else if(m.type==='event'){
+    $('monitorStatus').textContent=m.text;
+    if(m.type==='event'&&m.text==='GAME END') pathLine.setAttribute('points','');
+  }
 }
 
-function getLevel() {
-    if (reactionTimes.length === 0) return "BEGINNER";
-
-    const avg = averageReaction();
-
-    if (avg < 0.30) return "PRO";
-    if (avg < 0.55) return "INTERMEDIATE";
-    return "BEGINNER";
+async function setupCamera(){
+  try{
+    mediaStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+    camera.srcObject=mediaStream; await camera.play();
+    const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
+    handLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL_URL},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.5,minHandPresenceConfidence:.5,minTrackingConfidence:.5});
+    tracking=true;trackingStatus.textContent='MediaPipe準備完了';trackLoop();
+  }catch(e){trackingStatus.textContent='カメラ/MediaPipe開始失敗';console.error(e)}
 }
-
-function updateUI() {
-    scoreEl.textContent = score;
-
-    const avg = averageReaction();
-    reactionEl.textContent = avg.toFixed(2) + "s";
-
-    const level = getLevel();
-    levelEl.textContent = level;
-
-    const remain = Math.max(
-        0,
-        Math.ceil(GAME_DURATION - (performance.now() - startTime) / 1000)
-    );
-    timeEl.textContent = remain;
+function trackLoop(){
+  if(!tracking)return;
+  if(camera.readyState>=2&&camera.currentTime!==lastVideoTime){
+    lastVideoTime=camera.currentTime;
+    try{const r=handLandmarker.detectForVideo(camera,performance.now());processHand(r)}catch(e){console.warn(e)}
+  }
+  requestAnimationFrame(trackLoop);
 }
-
-function generateTarget() {
-    const rect = gameArea.getBoundingClientRect();
-
-    const margin = 45;
-    const x = margin + Math.random() * (rect.width - margin * 2);
-    const y = margin + Math.random() * (rect.height - margin * 2);
-
-    target.style.left = x + "px";
-    target.style.top = y + "px";
-    target.style.display = "block";
-
-    spawnTime = performance.now();
+function processHand(r){
+  if(!r?.landmarks?.length){trackingStatus.textContent='手をカメラに映してください';return}
+  const tip=r.landmarks[0][4];
+  const now=performance.now();
+  const x=1-tip.x,y=tip.y;
+  drawCameraPoint(x,y);
+  if(gameRunning&&now-lastPathSample>=45){
+    currentPath.push({t:+((now-spawnTime)/1000).toFixed(4),x:+x.toFixed(5),y:+y.toFixed(5)});
+    lastPathSample=now;
+    const sample=currentPath.slice(-24);send({type:'thumb',x,y,targetId,path:sample,count:currentPath.length});
+  }
+  lastThumb={x,y,t:now};
 }
+function drawCameraPoint(x,y){const w=camera.videoWidth||640,h=camera.videoHeight||480;cameraCanvas.width=w;cameraCanvas.height=h;const c=cameraCanvas.getContext('2d');c.clearRect(0,0,w,h);c.fillStyle='#00e676';c.beginPath();c.arc(x*w,y*h,8,0,Math.PI*2);c.fill()}
 
-function submitQuestionnaire(e) {
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+function questionnaireSubmit(e){e.preventDefault();e.stopPropagation();const req=[['ageGroup','年齢'],['handedness','利き手'],['dailyGame','1日のゲーム時間'],['smartphoneGame','スマートフォンゲームのプレイ頻度'],['gameExperience','E-Sports・アクションゲーム経験']];for(const [id,n] of req){if(!$ (id).value){$('questionError').textContent='「'+n+'」を選択してください。';return}}qData={ageGroup:$('ageGroup').value,handedness:$('handedness').value,dailyGameTime:$('dailyGame').value,smartphoneGameFrequency:$('smartphoneGame').value,gameExperience:$('gameExperience').value,favoriteGame:$('favoriteGame').value.trim()||'未回答'};questionnaire.style.display='none';startCard.classList.remove('hidden');}
+qButton.addEventListener('pointerdown',questionnaireSubmit);
 
-    const required = [
-        [ageGroupEl, "年齢"],
-        [handednessEl, "利き手"],
-        [dailyGameEl, "1日のゲーム時間"],
-        [smartphoneGameEl, "スマートフォンゲームのプレイ頻度"],
-        [gameExperienceEl, "E-Sports・アクションゲームの経験"]
-    ];
+function generateTarget(){const r=game.getBoundingClientRect(),margin=48;const x=margin+Math.random()*Math.max(1,r.width-margin*2),y=margin+Math.random()*Math.max(1,r.height-margin*2);target.style.left=x+'px';target.style.top=y+'px';target.style.display='block';targetId++;currentPath=[];lastPathSample=0;spawnTime=performance.now();send({type:'state',time:Math.max(0,Math.ceil(GAME_DURATION-(spawnTime-startTime)/1000)),score,reaction:avg(),level:level(),targetVisible:true,target:{id:targetId,x:x/r.width,y:y/r.height}});}
+function startGame(){score=0;reactionTimes=[];records=[];startTime=performance.now();gameRunning=true;startCard.classList.add('hidden');resultCard.classList.add('hidden');ui();generateTarget();send({type:'event',text:'GAME START'});clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
+function hitTarget(){if(!gameRunning)return;const tap=performance.now(),reaction=(tap-spawnTime)/1000;reactionTimes.push(reaction);score++;const r=game.getBoundingClientRect();const tx=parseFloat(target.style.left),ty=parseFloat(target.style.top);records.push({targetId,reactionTime:reaction,targetX:tx/r.width,targetY:ty/r.height,path:currentPath.slice(),pathPointCount:currentPath.length});target.classList.add('hit');setTimeout(()=>target.classList.remove('hit'),70);send({type:'event',text:'TARGET #'+targetId+' HIT / reaction '+reaction.toFixed(3)+'s',record:records[records.length-1]});ui();generateTarget();}
+function checkTap(e){if(!gameRunning)return;const now=performance.now();if(now-lastTapTime<100)return;const p=e.touches?.[0]||e,r=target.getBoundingClientRect();if(p.clientX>=r.left&&p.clientX<=r.right&&p.clientY>=r.top&&p.clientY<=r.bottom){e.preventDefault();lastTapTime=now;hitTarget()}}
+game.addEventListener('pointerdown',checkTap);game.addEventListener('touchstart',checkTap,{passive:false});
+startButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();startGame()});
+restartButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();resultCard.classList.add('hidden');startCard.classList.remove('hidden')});
 
-    const missing = required.find(([el]) => !el.value);
-    if (missing) {
-        questionError.textContent = `「${missing[1]}」を選択してください。`;
-        missing[0].focus();
-        return;
-    }
+function endGame(){if(!gameRunning)return;gameRunning=false;clearInterval(timerId);target.style.display='none';$('time').textContent='0';$('finalScore').textContent=score;$('finalAvg').textContent=avg().toFixed(2)+'s';$('finalLevel').textContent=level();resultCard.classList.remove('hidden');send({type:'event',text:'GAME END'});send({type:'state',time:0,score,reaction:avg(),level:level(),targetVisible:false,target:{id:targetId,x:0,y:0}});}
+function csvEscape(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+function downloadData(){const rows=[['experiment','value'],['age',qData.ageGroup],['handedness',qData.handedness],['daily_game_time',qData.dailyGameTime],['smartphone_game_frequency',qData.smartphoneGameFrequency],['game_experience',qData.gameExperience],['favorite_game',qData.favoriteGame],['total_score',score],['average_reaction_sec',avg().toFixed(4)],['level',level()]];rows.push([]);rows.push(['target_id','reaction_time_sec','target_x','target_y','path_point_count','path_json']);for(const r of records)rows.push([r.targetId,r.reactionTime.toFixed(4),r.targetX.toFixed(5),r.targetY.toFixed(5),r.pathPointCount,JSON.stringify(r.path)]);const csv='\uFEFF'+rows.map(x=>x.map(csvEscape).join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='reflex_media_experiment_data.csv';document.body.appendChild(a);a.click();a.remove()}
+downloadButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();downloadData()});
 
-    questionError.textContent = "";
-    questionnaireData = {
-        ageGroup: ageGroupEl.value,
-        handedness: handednessEl.value,
-        dailyGameTime: dailyGameEl.value,
-        smartphoneGameFrequency: smartphoneGameEl.value,
-        gameExperience: gameExperienceEl.value,
-        favoriteGame: favoriteGameEl.value.trim() || "未回答"
-    };
-
-    questionnaire.style.display = "none";
-    startCard.style.display = "block";
-}
-
-function startGame() {
-    score = 0;
-    reactionTimes = [];
-    startTime = performance.now();
-    gameRunning = true;
-
-    startCard.style.display = "none";
-    resultCard.style.display = "none";
-
-    updateUI();
-    generateTarget();
-
-    clearInterval(timerId);
-    timerId = setInterval(() => {
-        updateUI();
-
-        if (performance.now() - startTime >= GAME_DURATION * 1000) {
-            endGame();
-        }
-    }, 50);
-}
-
-function hitTarget() {
-    if (!gameRunning) return;
-
-    const reaction = (performance.now() - spawnTime) / 1000;
-
-    reactionTimes.push(reaction);
-    score++;
-
-    updateUI();
-    generateTarget();
-}
-
-function csvEscape(value) {
-    const text = String(value ?? "");
-    return '"' + text.replace(/"/g, '""') + '"';
-}
-
-function downloadExperimentData() {
-    const rows = [
-        ["項目", "回答"],
-        ["年齢", questionnaireData.ageGroup || "未回答"],
-        ["利き手", questionnaireData.handedness || "未回答"],
-        ["1日のゲーム時間", questionnaireData.dailyGameTime || "未回答"],
-        ["スマートフォンゲームのプレイ頻度", questionnaireData.smartphoneGameFrequency || "未回答"],
-        ["E-Sports・アクションゲーム経験", questionnaireData.gameExperience || "未回答"],
-        ["普段プレイしているゲーム", questionnaireData.favoriteGame || "未回答"],
-        ["スコア", score],
-        ["平均反応時間（秒）", averageReaction().toFixed(3)],
-        ["レベル", getLevel()],
-        ["反応時間データ（秒）", reactionTimes.map(v => v.toFixed(3)).join(" / ")]
-    ];
-
-    const csv = "\uFEFF" + rows.map(row => row.map(csvEscape).join(",")).join("\r\n");
-    const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "reflex_game_experiment_data.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-}
-
-function endGame() {
-    if (!gameRunning) return;
-
-    gameRunning = false;
-    clearInterval(timerId);
-    target.style.display = "none";
-
-    const avg = averageReaction();
-    const level = getLevel();
-
-    timeEl.textContent = "0";
-    finalScore.textContent = score;
-    finalAvg.textContent = avg.toFixed(2) + "s";
-    finalLevel.textContent = level;
-
-    resultCard.style.display = "block";
-}
-
-let lastTapTime = 0;
-
-function checkTargetTap(e) {
-    if (!gameRunning) return;
-
-    const now = performance.now();
-    if (now - lastTapTime < 100) return;
-
-    const point = e.touches ? e.touches[0] : e;
-    const rect = target.getBoundingClientRect();
-
-    if (
-        point.clientX >= rect.left &&
-        point.clientX <= rect.right &&
-        point.clientY >= rect.top &&
-        point.clientY <= rect.bottom
-    ) {
-        e.preventDefault();
-        lastTapTime = now;
-        hitTarget();
-    }
-}
-
-gameArea.addEventListener("pointerdown", checkTargetTap);
-gameArea.addEventListener("touchstart", checkTargetTap, { passive: false });
-
-function startGameFromButton(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    startGame();
-}
-
-startButton.addEventListener("pointerdown", startGameFromButton);
-restartButton.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    questionnaire.style.display = "flex";
-    resultCard.style.display = "none";
-});
-
-questionnaireButton.addEventListener("pointerdown", submitQuestionnaire);
-downloadDataButton.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); downloadExperimentData(); });
-
-updateUI();
+$('monitorPanel').classList.add('hidden');
+$('top').classList.add('hidden');
+$('game').classList.add('hidden');
+$('hint').classList.add('hidden');
 </script>
 </body>
 </html>
