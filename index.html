@@ -84,6 +84,43 @@ button {
     color: white;
 }
 button:active { transform: scale(.97); }
+#questionnaire {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 14px;
+    z-index: 20;
+    background: rgba(9,9,9,.97);
+}
+.question-card {
+    width: min(94%, 430px);
+    max-height: 100%;
+    overflow-y: auto;
+    background: rgba(0,0,0,.92);
+    border: 1px solid #444;
+    border-radius: 18px;
+    padding: 20px;
+}
+.question-card h1 { margin: 0 0 6px; font-size: 23px; }
+.question-card .sub { color: #aaa; font-size: 12px; line-height: 1.5; margin-bottom: 16px; }
+.q { margin: 14px 0; text-align: left; }
+.q .title { display:block; font-size:14px; font-weight:bold; margin-bottom:7px; }
+.q select {
+    width: 100%; padding: 11px; border-radius: 10px; border: 1px solid #555;
+    background: #171717; color: white; font-size: 15px;
+}
+.q input[type="text"] {
+    width: 100%; padding: 11px; border-radius: 10px; border: 1px solid #555;
+    background: #171717; color: white; font-size: 15px;
+}
+.q small { color:#888; display:block; margin-top:5px; }
+#questionnaire button { width:100%; margin-top:8px; }
+#questionnaire .privacy { font-size:11px; color:#888; line-height:1.5; margin-top:10px; }
+#questionnaire .error { color:#ff6b6b; font-size:12px; min-height:18px; margin-top:6px; }
+#downloadDataButton { background:#333; margin-top:10px; }
 #result { display: none; }
 #hint {
     height: 36px;
@@ -124,6 +161,87 @@ button:active { transform: scale(.97); }
     <div id="game">
         <div id="target"></div>
 
+        <div id="questionnaire">
+            <div class="question-card">
+                <h1>実験前アンケート</h1>
+                <div class="sub">
+                    卒業研究の実験に使用します。氏名・住所など、個人を特定できる情報は入力しないでください。<br>
+                    回答後、「ゲームへ進む」を押してください。
+                </div>
+
+                <div class="q">
+                    <label class="title" for="ageGroup">1. 年齢</label>
+                    <select id="ageGroup">
+                        <option value="">選択してください</option>
+                        <option>18歳未満</option>
+                        <option>18～20歳</option>
+                        <option>21～23歳</option>
+                        <option>24～29歳</option>
+                        <option>30歳以上</option>
+                        <option>回答しない</option>
+                    </select>
+                </div>
+
+                <div class="q">
+                    <label class="title" for="handedness">2. 利き手</label>
+                    <select id="handedness">
+                        <option value="">選択してください</option>
+                        <option>右手</option>
+                        <option>左手</option>
+                        <option>両利き</option>
+                        <option>回答しない</option>
+                    </select>
+                </div>
+
+                <div class="q">
+                    <label class="title" for="dailyGame">3. 1日のゲーム時間</label>
+                    <select id="dailyGame">
+                        <option value="">選択してください</option>
+                        <option>ほとんどしない</option>
+                        <option>30分未満</option>
+                        <option>30分～1時間</option>
+                        <option>1～2時間</option>
+                        <option>2～4時間</option>
+                        <option>4時間以上</option>
+                    </select>
+                </div>
+
+                <div class="q">
+                    <label class="title" for="smartphoneGame">4. スマートフォンゲームのプレイ頻度</label>
+                    <select id="smartphoneGame">
+                        <option value="">選択してください</option>
+                        <option>ほとんどしない</option>
+                        <option>月に数回</option>
+                        <option>週に1～2回</option>
+                        <option>週に3～6回</option>
+                        <option>ほぼ毎日</option>
+                    </select>
+                </div>
+
+                <div class="q">
+                    <label class="title" for="gameExperience">5. E-Sports・アクションゲームの経験</label>
+                    <select id="gameExperience">
+                        <option value="">選択してください</option>
+                        <option>ほとんどない</option>
+                        <option>少しある</option>
+                        <option>普通</option>
+                        <option>よくプレイする</option>
+                        <option>非常によくプレイする</option>
+                    </select>
+                </div>
+
+                <div class="q">
+                    <label class="title" for="favoriteGame">6. 普段プレイしているゲーム（任意）</label>
+                    <input id="favoriteGame" type="text" maxlength="80" placeholder="例：HOK、PUBG、APEXなど">
+                </div>
+
+                <div id="questionError" class="error"></div>
+                <button id="questionnaireButton">ゲームへ進む</button>
+                <div class="privacy">※アンケート回答は、このページ上で実験データと一緒に記録できます。外部サービスへ自動送信はしません。</div>
+            </div>
+        </div>
+
+
         <div id="message">
             <div id="startCard" class="card">
                 <h1>REFLEX GAME</h1>
@@ -144,6 +262,7 @@ button:active { transform: scale(.97); }
                 <p>LEVEL</p>
                 <div id="finalLevel" style="font-size:28px;color:#ff8c00;">BEGINNER</div>
                 <br>
+                <button id="downloadDataButton">実験データを保存（CSV）</button>
                 <button id="restartButton">PLAY AGAIN</button>
             </div>
         </div>
@@ -166,6 +285,19 @@ const startCard = document.getElementById("startCard");
 const resultCard = document.getElementById("result");
 const startButton = document.getElementById("startButton");
 const restartButton = document.getElementById("restartButton");
+const downloadDataButton = document.getElementById("downloadDataButton");
+
+const questionnaire = document.getElementById("questionnaire");
+const questionnaireButton = document.getElementById("questionnaireButton");
+const questionError = document.getElementById("questionError");
+const ageGroupEl = document.getElementById("ageGroup");
+const handednessEl = document.getElementById("handedness");
+const dailyGameEl = document.getElementById("dailyGame");
+const smartphoneGameEl = document.getElementById("smartphoneGame");
+const gameExperienceEl = document.getElementById("gameExperience");
+const favoriteGameEl = document.getElementById("favoriteGame");
+
+let questionnaireData = {};
 
 const finalScore = document.getElementById("finalScore");
 const finalAvg = document.getElementById("finalAvg");
@@ -223,6 +355,41 @@ function generateTarget() {
     spawnTime = performance.now();
 }
 
+function submitQuestionnaire(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    const required = [
+        [ageGroupEl, "年齢"],
+        [handednessEl, "利き手"],
+        [dailyGameEl, "1日のゲーム時間"],
+        [smartphoneGameEl, "スマートフォンゲームのプレイ頻度"],
+        [gameExperienceEl, "E-Sports・アクションゲームの経験"]
+    ];
+
+    const missing = required.find(([el]) => !el.value);
+    if (missing) {
+        questionError.textContent = `「${missing[1]}」を選択してください。`;
+        missing[0].focus();
+        return;
+    }
+
+    questionError.textContent = "";
+    questionnaireData = {
+        ageGroup: ageGroupEl.value,
+        handedness: handednessEl.value,
+        dailyGameTime: dailyGameEl.value,
+        smartphoneGameFrequency: smartphoneGameEl.value,
+        gameExperience: gameExperienceEl.value,
+        favoriteGame: favoriteGameEl.value.trim() || "未回答"
+    };
+
+    questionnaire.style.display = "none";
+    startCard.style.display = "block";
+}
+
 function startGame() {
     score = 0;
     reactionTimes = [];
@@ -255,6 +422,38 @@ function hitTarget() {
 
     updateUI();
     generateTarget();
+}
+
+function csvEscape(value) {
+    const text = String(value ?? "");
+    return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function downloadExperimentData() {
+    const rows = [
+        ["項目", "回答"],
+        ["年齢", questionnaireData.ageGroup || "未回答"],
+        ["利き手", questionnaireData.handedness || "未回答"],
+        ["1日のゲーム時間", questionnaireData.dailyGameTime || "未回答"],
+        ["スマートフォンゲームのプレイ頻度", questionnaireData.smartphoneGameFrequency || "未回答"],
+        ["E-Sports・アクションゲーム経験", questionnaireData.gameExperience || "未回答"],
+        ["普段プレイしているゲーム", questionnaireData.favoriteGame || "未回答"],
+        ["スコア", score],
+        ["平均反応時間（秒）", averageReaction().toFixed(3)],
+        ["レベル", getLevel()],
+        ["反応時間データ（秒）", reactionTimes.map(v => v.toFixed(3)).join(" / ")]
+    ];
+
+    const csv = "\uFEFF" + rows.map(row => row.map(csvEscape).join(",")).join("\r\n");
+    const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "reflex_game_experiment_data.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
 
 function endGame() {
@@ -308,7 +507,15 @@ function startGameFromButton(e) {
 }
 
 startButton.addEventListener("pointerdown", startGameFromButton);
-restartButton.addEventListener("pointerdown", startGameFromButton);
+restartButton.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    questionnaire.style.display = "flex";
+    resultCard.style.display = "none";
+});
+
+questionnaireButton.addEventListener("pointerdown", submitQuestionnaire);
+downloadDataButton.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); downloadExperimentData(); });
 
 updateUI();
 </script>
