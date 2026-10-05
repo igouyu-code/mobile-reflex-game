@@ -279,8 +279,8 @@ target.addEventListener("pointerdown", (e) => {
     hitTarget();
 });
 
-startButton.addEventListener("pointerdown", (e) => { e.preventDefault(); startGame(); });
-restartButton.addEventListener("pointerdown", (e) => { e.preventDefault(); startGame(); });
+startButton.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); startGame(); });
+restartButton.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); startGame(); });
 
 updateUI();
 </script>
