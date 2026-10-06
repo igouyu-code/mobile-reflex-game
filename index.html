@@ -168,11 +168,11 @@ async function setupPcCamera(){
 
     // GPUが使えないPCでも動くよう、GPU→CPUの順にフォールバック。
     try{
-      pcHandLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL_URL,delegate:'GPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.35,minHandPresenceConfidence:.35,minTrackingConfidence:.35});
+      pcHandLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL_URL,delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.35,minHandPresenceConfidence:.35,minTrackingConfidence:.35});
       pcCameraStatus.textContent='MediaPipe GPU準備完了・手を映してください';
     }catch(gpuError){
       console.warn('MediaPipe GPU failed; fallback to CPU',gpuError);
-      pcHandLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL_URL,delegate:'CPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.35,minHandPresenceConfidence:.35,minTrackingConfidence:.35});
+      pcHandLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL_URL,delegate:'CPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.35,minHandPresenceConfidence:.35,minTrackingConfidence:.35});
       pcCameraStatus.textContent='MediaPipe CPU準備完了・手を映してください';
     }
     pcTracking=true; pcLastVideoTime=-1; pcTrackLoop();
@@ -225,66 +225,39 @@ function pcTrackLoop(){
   requestAnimationFrame(pcTrackLoop);
 }
 const HAND_CONNECTIONS=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
-let pcSmoothX=null,pcSmoothY=null,pcThumbHistory=[],pcLastAcceptedTime=0;
+let pcHandStates=[
+  {x:null,y:null,history:[],lastX:null,lastY:null},
+  {x:null,y:null,history:[],lastX:null,lastY:null}
+];
+function median(arr){return arr.slice().sort((a,b)=>a-b)[Math.floor(arr.length/2)]}
+function resetPcHandStates(){pcHandStates=[{x:null,y:null,history:[],lastX:null,lastY:null},{x:null,y:null,history:[],lastX:null,lastY:null}];}
+function handLabel(i,r){const h=r?.handednesses?.[i]?.[0];return h?(h.displayName||h.categoryName||('HAND '+(i+1))):('HAND '+(i+1));}
 function processPcHand(r){
-  const ctx=pcCameraCanvas.getContext('2d');
-  const w=pcCamera.videoWidth||1280,h=pcCamera.videoHeight||720;
+  const ctx=pcCameraCanvas.getContext('2d'),w=pcCamera.videoWidth||1280,h=pcCamera.videoHeight||720;
   if(pcCameraCanvas.width!==w||pcCameraCanvas.height!==h){pcCameraCanvas.width=w;pcCameraCanvas.height=h;}
   ctx.clearRect(0,0,w,h);
-  if(!r?.landmarks?.length){
-    pcCameraStatus.textContent='MediaPipe動作中：手をカメラに映してください（手のひら全体を入れると精度UP）';
-    pcThumbCoord.textContent='親指座標：検出できません　軌跡：'+pcPath.length+' points';
-    pcLastX=null;pcLastY=null;pcSmoothX=null;pcSmoothY=null;pcThumbHistory=[];return;
+  if(!r?.landmarks?.length){pcCameraStatus.textContent='手をカメラに映してください（両手を入れると両手同時追跡）';pcThumbCoord.textContent='両手の親指：検出できません　軌跡：'+pcPath.length+' points';resetPcHandStates();return;}
+  const seen=[];
+  for(let i=0;i<r.landmarks.length&&i<2;i++){
+    const lm=r.landmarks[i],st=pcHandStates[i],tip=lm[4],rawX=tip.x,rawY=tip.y;
+    let cx=rawX,cy=rawY;
+    if(st.x!==null){const jump=Math.hypot(rawX-st.x,rawY-st.y),palm=Math.max(.05,Math.hypot(lm[5].x-lm[0].x,lm[5].y-lm[0].y)),lim=Math.max(.055,Math.min(.18,palm*1.8));if(jump>lim){cx=st.x+(rawX-st.x)*(lim/jump);cy=st.y+(rawY-st.y)*(lim/jump);}}
+    st.history.push({x:cx,y:cy});if(st.history.length>5)st.history.shift();
+    const mx=median(st.history.map(p=>p.x)),my=median(st.history.map(p=>p.y)),a=.32;st.x=st.x===null?mx:st.x*(1-a)+mx*a;st.y=st.y===null?my:st.y*(1-a)+my*a;
+    const x=Math.max(0,Math.min(1,st.x)),y=Math.max(0,Math.min(1,st.y)),label=handLabel(i,r);seen.push({x,y,label});
+    ctx.lineWidth=Math.max(2,w/500);ctx.strokeStyle=i===0?'rgba(0,230,118,.78)':'rgba(0,180,255,.78)';ctx.fillStyle=i===0?'rgba(0,230,118,.9)':'rgba(0,180,255,.9)';
+    for(const [a,b] of HAND_CONNECTIONS){ctx.beginPath();ctx.moveTo(lm[a].x*w,lm[a].y*h);ctx.lineTo(lm[b].x*w,lm[b].y*h);ctx.stroke();}
+    for(let j=0;j<lm.length;j++){ctx.beginPath();ctx.arc(lm[j].x*w,lm[j].y*h,j===4?11:5,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle=i===0?'#ff1744':'#ffea00';ctx.beginPath();ctx.arc(x*w,y*h,14,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();
+    ctx.font='bold '+Math.max(14,w/100)+'px sans-serif';ctx.fillStyle='#fff';ctx.fillText((label==='Left'?'LEFT THUMB':label==='Right'?'RIGHT THUMB':label+' THUMB'),x*w+18,y*h-12);
+    if(st.lastX!==null){if(Math.hypot(x-st.lastX,y-st.lastY)<.14)pcPath.push({t:performance.now(),x,y,hand:i});}else pcPath.push({t:performance.now(),x,y,hand:i});
+    st.lastX=x;st.lastY=y;
   }
-  const lm=r.landmarks[0];
-  // MediaPipeの親指4番だけに依存せず、親指の付け根～先端(2,3,4)の形状も確認して外れ値を抑える。
-  const j2=lm[2],j3=lm[3],tip=lm[4],indexMcp=lm[5],wrist=lm[0];
-  const rawX=tip.x,rawY=tip.y;
-  const palmSize=Math.max(0.05,Math.hypot(indexMcp.x-wrist.x,indexMcp.y-wrist.y));
-  const thumbSeg=Math.hypot(tip.x-j3.x,tip.y-j3.y);
-  const bendSeg=Math.hypot(j3.x-j2.x,j3.y-j2.y);
-  // 極端な1フレームジャンプを捨てる。通常の指の移動は通し、明らかな飛びだけ除外。
-  let candidateX=rawX,candidateY=rawY;
-  if(pcSmoothX!==null){
-    const jump=Math.hypot(rawX-pcSmoothX,rawY-pcSmoothY);
-    const limit=Math.max(0.055,Math.min(0.18,palmSize*1.8));
-    if(jump>limit){candidateX=pcSmoothX+(rawX-pcSmoothX)*(limit/jump);candidateY=pcSmoothY+(rawY-pcSmoothY)*(limit/jump);}
-  }
-  pcThumbHistory.push({x:candidateX,y:candidateY});
-  if(pcThumbHistory.length>5)pcThumbHistory.shift();
-  // 5フレーム中央値：一瞬の誤認識に強く、EMAより外れ値に強い。
-  const median=(arr)=>arr.slice().sort((a,b)=>a-b)[Math.floor(arr.length/2)];
-  const medX=median(pcThumbHistory.map(p=>p.x)),medY=median(pcThumbHistory.map(p=>p.y));
-  const alpha=.32;
-  pcSmoothX=pcSmoothX===null?medX:pcSmoothX*(1-alpha)+medX*alpha;
-  pcSmoothY=pcSmoothY===null?medY:pcSmoothY*(1-alpha)+medY*alpha;
-  const x=Math.max(0,Math.min(1,pcSmoothX)),y=Math.max(0,Math.min(1,pcSmoothY)),now=performance.now();
-
-  // 21ランドマークと骨格を表示。親指4番は特に大きく表示。
-  ctx.lineWidth=Math.max(2,w/500);ctx.strokeStyle='rgba(0,230,118,.78)';ctx.fillStyle='rgba(0,230,118,.9)';
-  for(const [a,b] of HAND_CONNECTIONS){ctx.beginPath();ctx.moveTo(lm[a].x*w,lm[a].y*h);ctx.lineTo(lm[b].x*w,lm[b].y*h);ctx.stroke();}
-  for(let i=0;i<lm.length;i++){ctx.beginPath();ctx.arc(lm[i].x*w,lm[i].y*h,i===4?11:5,0,Math.PI*2);ctx.fill();}
-  // 親指専用：赤丸＋白リング＋「THUMB TIP」ラベル。
-  ctx.fillStyle='#ff1744';ctx.beginPath();ctx.arc(x*w,y*h,14,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();
-  ctx.font='bold '+Math.max(14,w/90)+'px sans-serif';ctx.fillStyle='#fff';ctx.fillText('THUMB TIP',x*w+18,y*h-12);
-
-  if(pcLastX!==null){
-    const d=Math.hypot(x-pcLastX,y-pcLastY);
-    if(d<.14){
-      pcPath.push({t:now,x,y});
-      // 軌跡はカメラ映像上に少し長く残す。
-      ctx.strokeStyle='#00ff66';ctx.lineWidth=Math.max(4,w/350);ctx.beginPath();
-      const recent=pcPath.slice(-120);
-      if(recent.length){ctx.moveTo(recent[0].x*w,recent[0].y*h);for(let i=1;i<recent.length;i++)ctx.lineTo(recent[i].x*w,recent[i].y*h);ctx.stroke();}
-    }
-  } else pcPath.push({t:now,x,y});
-  if(pcPath.length>1000)pcPath.shift();
-  pcLastX=x;pcLastY=y;pcLastAcceptedTime=now;
-  pcCameraStatus.textContent='外付けカメラ接続済み・親指を高精度追跡中';
-  pcThumbCoord.textContent='親指座標：X '+x.toFixed(3)+' / Y '+y.toFixed(3)+'　軌跡：'+pcPath.length+' points';
+  if(pcPath.length>1000)pcPath.splice(0,pcPath.length-1000);
+  for(const hi of [0,1]){const recent=pcPath.filter(p=>p.hand===hi).slice(-120);if(recent.length){ctx.strokeStyle=hi===0?'#00ff66':'#00b7ff';ctx.lineWidth=Math.max(4,w/350);ctx.beginPath();ctx.moveTo(recent[0].x*w,recent[0].y*h);for(let j=1;j<recent.length;j++)ctx.lineTo(recent[j].x*w,recent[j].y*h);ctx.stroke();}}
+  pcCameraStatus.textContent=(seen.length===2?'両手を同時認識中':'1手を認識中')+'・親指追跡中';
+  pcThumbCoord.textContent=seen.map(p=>p.label+'親指 X '+p.x.toFixed(3)+' / Y '+p.y.toFixed(3)).join('　｜　')+'　軌跡：'+pcPath.length+' points';
 }
-
 async function setupCamera(){
   try{
     const { FilesetResolver, HandLandmarker } = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21");
