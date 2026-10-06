@@ -68,7 +68,7 @@
 <div id="monitorPanel" class="hidden">
   <div class="panel"><h2>PCモニター接続</h2><div class="small">スマホのカメラを使ってMediaPipeで親指の位置を取得し、ゲーム中の親指軌跡を記録します。</div><div>スマホ画面に表示されたコード：</div><div id="monitorCode" class="code">------</div><div id="monitorStatus" class="status">接続待ち</div><button id="monitorBack" class="secondary">戻る</button></div>
   <div class="monitor-layout" style="margin-top:14px">
-    <div class="panel"><h2>外付けカメラ・親指追跡</h2><div class="monitor-camera"><video id="pcCamera" autoplay playsinline muted></video><canvas id="pcCameraCanvas"></canvas></div><div id="pcCameraStatus" class="camera-readout">カメラ起動中…</div><div id="pcThumbCoord" class="camera-readout">親指座標：-- / --　軌跡：0 points</div></div>
+    <div class="panel"><h2>外付けカメラ・親指追跡</h2><div class="monitor-camera"><video id="pcCamera" autoplay playsinline muted></video><canvas id="pcCameraCanvas"></canvas></div><div style="margin-top:8px"><select id="pcCameraSelect" style="width:100%;padding:9px;border-radius:8px;background:#171a1f;color:#fff;border:1px solid #555"><option>カメラを選択</option></select></div><div id="pcCameraStatus" class="camera-readout">カメラ起動中…</div><div id="pcThumbCoord" class="camera-readout">親指座標：-- / --　軌跡：0 points</div></div>
     <div class="panel"><h2>ゲーム画面</h2><div id="monitorGame" class="monitor-game"><div id="monitorTarget" class="monitor-target" style="display:none"></div><svg id="pathSvg" class="path-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline id="pathLine" points="" fill="none" stroke="#00e676" stroke-width="1.2"/></svg><div id="thumbDot" class="thumb-dot" style="display:none"></div></div></div>
     <div class="panel"><h2>リアルタイム計測</h2><div class="monitor-stats"><div class="monitor-stat"><span>TIME</span><b id="mTime">20</b></div><div class="monitor-stat"><span>SCORE</span><b id="mScore">0</b></div><div class="monitor-stat"><span>REACTION</span><b id="mReaction">0.00s</b></div><div class="monitor-stat"><span>LEVEL</span><b id="mLevel">BEGINNER</b></div></div><h2 style="margin-top:18px">現在のターゲット</h2><div class="small" id="mTargetInfo">待機中</div><h2 style="margin-top:18px">軌跡</h2><div class="small" id="mPathInfo">0 points</div></div>
   </div>
@@ -145,19 +145,77 @@ function handleMonitorData(m){
 
 async function setupPcCamera(){
   try{
-    pcCameraStatus.textContent='外付けカメラを起動しています…';
-    pcMediaStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920,min:1280},height:{ideal:1080,min:720},frameRate:{ideal:30,max:60}},audio:false});
-    pcCamera.srcObject=pcMediaStream;
-    await pcCamera.play();
-    const { FilesetResolver, HandLandmarker } = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs");
+    if(!navigator.mediaDevices?.getUserMedia) throw new Error('getUserMedia unavailable');
+    pcCameraStatus.textContent='カメラへのアクセスを許可してください…';
+
+    // まず権限を取得。これでカメラ名(device label)も取得できるようになる。
+    let temp=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    temp.getTracks().forEach(t=>t.stop());
+    await refreshPcCameraList();
+
+    // 選択された外付けカメラを明示的に使用する。facingModeだけに任せない。
+    let deviceId=pcCameraSelect.value;
+    if(!deviceId || deviceId==='__none__'){
+      const devices=await navigator.mediaDevices.enumerateDevices();
+      const cams=devices.filter(d=>d.kind==='videoinput');
+      deviceId=cams.length?cams[cams.length-1].deviceId:'';
+    }
+    await startPcCamera(deviceId);
+
+    const { FilesetResolver, HandLandmarker } = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs');
+    pcCameraStatus.textContent='MediaPipeモデルを読み込んでいます…';
     const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
-    pcHandLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL_URL,delegate:'GPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.55,minHandPresenceConfidence:.55,minTrackingConfidence:.55});
-    pcTracking=true; pcCameraStatus.textContent='外付けカメラ接続済み・MediaPipe追跡中'; pcTrackLoop();
+
+    // GPUが使えないPCでも動くよう、GPU→CPUの順にフォールバック。
+    try{
+      pcHandLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL_URL,delegate:'GPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.35,minHandPresenceConfidence:.35,minTrackingConfidence:.35});
+      pcCameraStatus.textContent='MediaPipe GPU準備完了・手を映してください';
+    }catch(gpuError){
+      console.warn('MediaPipe GPU failed; fallback to CPU',gpuError);
+      pcHandLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL_URL,delegate:'CPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.35,minHandPresenceConfidence:.35,minTrackingConfidence:.35});
+      pcCameraStatus.textContent='MediaPipe CPU準備完了・手を映してください';
+    }
+    pcTracking=true; pcLastVideoTime=-1; pcTrackLoop();
   }catch(e){
-    pcCameraStatus.textContent='カメラを起動できません。カメラ使用を許可してください。';
     console.error(e);
+    pcCameraStatus.textContent='起動失敗：'+(e?.message||e)+'（カメラ許可・HTTPS・外付けカメラを確認）';
   }
 }
+
+async function refreshPcCameraList(){
+  const devices=await navigator.mediaDevices.enumerateDevices();
+  const cams=devices.filter(d=>d.kind==='videoinput');
+  pcCameraSelect.innerHTML='';
+  cams.forEach((d,i)=>{
+    const o=document.createElement('option');
+    o.value=d.deviceId;
+    o.textContent=d.label || ('カメラ '+(i+1));
+    pcCameraSelect.appendChild(o);
+  });
+  if(!cams.length){
+    const o=document.createElement('option');o.value='__none__';o.textContent='カメラが見つかりません';pcCameraSelect.appendChild(o);
+  }
+}
+
+async function startPcCamera(deviceId){
+  if(pcMediaStream) pcMediaStream.getTracks().forEach(t=>t.stop());
+  const constraints=deviceId ? {video:{deviceId:{exact:deviceId},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:60}},audio:false}
+                         : {video:{width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:60}},audio:false};
+  pcMediaStream=await navigator.mediaDevices.getUserMedia(constraints);
+  pcCamera.srcObject=pcMediaStream;
+  await pcCamera.play();
+  pcCameraStatus.textContent='外付けカメラ接続済み・映像取得中';
+}
+
+pcCameraSelect.addEventListener('change',async()=>{
+  if(!pcCameraSelect.value)return;
+  try{
+    await startPcCamera(pcCameraSelect.value);
+    pcLastVideoTime=-1;
+    pcCameraStatus.textContent=pcHandLandmarker?'カメラ変更済み・手を映してください':'カメラ変更済み';
+  }catch(e){pcCameraStatus.textContent='カメラ変更失敗：'+(e?.message||e);}
+});
+
 function pcTrackLoop(){
   if(!pcTracking)return;
   if(pcCamera.readyState>=2&&pcCamera.currentTime!==pcLastVideoTime){
@@ -174,7 +232,7 @@ function processPcHand(r){
   if(pcCameraCanvas.width!==w||pcCameraCanvas.height!==h){pcCameraCanvas.width=w;pcCameraCanvas.height=h;}
   ctx.clearRect(0,0,w,h);
   if(!r?.landmarks?.length){
-    pcCameraStatus.textContent='手をカメラに映してください（手のひら全体を入れると精度UP）';
+    pcCameraStatus.textContent='MediaPipe動作中：手をカメラに映してください（手のひら全体を入れると精度UP）';
     pcThumbCoord.textContent='親指座標：検出できません　軌跡：'+pcPath.length+' points';
     pcLastX=null;pcLastY=null;pcSmoothX=null;pcSmoothY=null;pcThumbHistory=[];return;
   }
