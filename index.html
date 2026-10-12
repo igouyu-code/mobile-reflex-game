@@ -17,6 +17,8 @@
 #dataPanel{margin:12px 10px;padding:14px;background:#101318;border:1px solid #353a41;border-radius:16px}.data-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #24282d;font-size:12px}.data-row:last-child{border-bottom:0}.data-row span{color:#9aa3ad}.data-row b{text-align:right}.small{font-size:11px;color:#8f98a2;line-height:1.5}
 #hint{height:36px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;flex-shrink:0}
 @media(max-width:1000px){.monitor-layout{grid-template-columns:1fr 1fr}}@media(max-width:700px){.monitor-layout{grid-template-columns:1fr}.mode-grid{grid-template-columns:1fr}.monitor-game{height:300px}#cameraPanel{width:130px}}
+
+#trajectoryResults{margin-top:14px}.trajectory-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.trajectory-card{background:#101318;border:1px solid #353a41;border-radius:14px;padding:12px;min-width:0}.trajectory-card h3{font-size:15px;margin:0 0 8px}.trajectory-card canvas{display:block;width:100%;height:auto;background:#fff;border-radius:8px}.trajectory-card button{margin-top:8px}.trajectory-note{font-size:12px;color:#aeb6c0;margin:8px 0 0}.trajectory-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}@media(max-width:900px){.trajectory-grid{grid-template-columns:1fr}.monitor-layout{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -82,6 +84,18 @@
     <div class="panel"><h2>ゲーム画面</h2><div id="monitorGame" class="monitor-game"><div id="monitorTarget" class="monitor-target" style="display:none"></div><svg id="pathSvg" class="path-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline id="pathLine" points="" fill="none" stroke="#00e676" stroke-width="1.2"/></svg><div id="thumbDot" class="thumb-dot" style="display:none"></div></div></div>
     <div class="panel"><h2>リアルタイム計測</h2><div class="monitor-stats"><div class="monitor-stat"><span>TIME</span><b id="mTime">20</b></div><div class="monitor-stat"><span>SCORE</span><b id="mScore">0</b></div><div class="monitor-stat"><span>REACTION</span><b id="mReaction">0.00s</b></div><div class="monitor-stat"><span>LEVEL</span><b id="mLevel">BEGINNER</b></div></div><h2 style="margin-top:18px">現在のターゲット</h2><div class="small" id="mTargetInfo">待機中</div><h2 style="margin-top:18px">軌跡</h2><div class="small" id="mPathInfo">0 points</div></div>
   </div>
+  <div id="trajectoryResults" class="panel hidden">
+    <h2>実験後の軌跡図（4枚）</h2>
+    <div class="small">正解軌跡は同じ側に出現した赤い円の中心を出現順につないだ線、実測軌跡はキャリブレーション後の親指座標です。横軸・縦軸はゲーム画面内の正規化座標です。</div>
+    <div class="trajectory-grid" style="margin-top:12px">
+      <div class="trajectory-card"><h3>① 左半分：正解軌跡</h3><canvas id="plotIdealLeft" width="640" height="400"></canvas><button class="secondary" data-save-plot="plotIdealLeft">この図をPNG保存</button></div>
+      <div class="trajectory-card"><h3>② 左手：実測軌跡（左半分のターゲット中）</h3><canvas id="plotActualLeft" width="640" height="400"></canvas><button class="secondary" data-save-plot="plotActualLeft">この図をPNG保存</button></div>
+      <div class="trajectory-card"><h3>③ 右半分：正解軌跡</h3><canvas id="plotIdealRight" width="640" height="400"></canvas><button class="secondary" data-save-plot="plotIdealRight">この図をPNG保存</button></div>
+      <div class="trajectory-card"><h3>④ 右手：実測軌跡（右半分のターゲット中）</h3><canvas id="plotActualRight" width="640" height="400"></canvas><button class="secondary" data-save-plot="plotActualRight">この図をPNG保存</button></div>
+    </div>
+    <p id="trajectoryNote" class="trajectory-note">実験終了後に図を生成します。</p>
+    <div class="trajectory-actions"><button id="saveAllPlots">4つの図を順番にPNG保存</button></div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -101,7 +115,7 @@ let mode=null, peer=null, conn=null, handLandmarker=null, mediaStream=null, trac
 let pcHandLandmarker=null, pcMediaStream=null, pcTracking=false, pcLastVideoTime=-1, pcPath=[], pcLastX=null, pcLastY=null;
 let score=0,reactionTimes=[],records=[],startTime=0,spawnTime=0,gameRunning=false,timerId=null,targetId=0,currentPath=[],lastThumb=null,lastPathSample=0,lastTapTime=0;
 let qData={}; let previousTargetCenter=null;
-let pcExperiment={}; let pcRecords=[]; let pcEvents=[]; let pcThumbSamples=[]; let pcTarget=null;
+let pcExperiment={}; let pcRecords=[]; let pcEvents=[]; let pcThumbSamples=[]; let pcTarget=null; let pcTargetHistory=[];
 let pcLatestThumb=null, calibrationPoints=[], calibrationTransform=null, pcPhoneThumbSamples=[];
 const calibrationTargets=[{x:.1,y:.1},{x:.9,y:.1},{x:.1,y:.9}];
 
@@ -142,13 +156,14 @@ monitorTarget.addEventListener('click',monitorMouseHit);
 function handleMonitorData(m){
   if(m.type==='experimentStart'){
     pcExperiment=m.questionnaire||{};pcExperiment.startedAt=m.startedAt||new Date().toISOString();
-    pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];$('pcDownloadButton').classList.add('hidden');
+    pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];pcTargetHistory=[];$('pcDownloadButton').classList.add('hidden');$('trajectoryResults').classList.add('hidden');
     $('monitorStatus').textContent='接続しました。実験データを受信中です。';
   } else if(m.type==='state'){
     $('mTime').textContent=m.time;$('mScore').textContent=m.score;$('mReaction').textContent=Number(m.reaction||0).toFixed(2)+'s';$('mLevel').textContent=m.level;
     monitorTarget.style.display=m.targetVisible?'block':'none';monitorTarget.style.left=(m.target.x*100)+'%';monitorTarget.style.top=(m.target.y*100)+'%';
     $('mTargetInfo').textContent='Target #'+m.target.id+' / x='+Number(m.target.x).toFixed(3)+' y='+Number(m.target.y).toFixed(3);
     pcTarget={id:m.target.id,x:m.target.x,y:m.target.y,time:Date.now(),visible:m.targetVisible};
+    if(m.targetVisible && Number.isFinite(Number(m.target.id)) && !pcTargetHistory.some(t=>t.id===Number(m.target.id))){pcTargetHistory.push({id:Number(m.target.id),x:Number(m.target.x),y:Number(m.target.y),time:Date.now()});}
   } else if(m.type==='thumb'){
     thumbDot.style.display='block';thumbDot.style.left=(m.x*100)+'%';thumbDot.style.top=(m.y*100)+'%';
     $('mPathInfo').textContent=m.count+' points / Target #'+m.targetId;
@@ -158,11 +173,11 @@ function handleMonitorData(m){
     $('monitorStatus').textContent=m.text;
     pcEvents.push({time:new Date().toISOString(),text:m.text});
     if(m.record){pcRecords.push(m.record);}
-    if(m.text==='GAME START'){pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];pcPath=[];pcLastX=null;pcLastY=null;}
+    if(m.text==='GAME START'){pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];pcTargetHistory=[];pcPath=[];pcLastX=null;pcLastY=null;}
     if(m.text==='GAME END'){
       pathLine.setAttribute('points','');
       $('pcDownloadButton').classList.remove('hidden');
-      $('monitorStatus').textContent='実験終了。PC側でCSVを保存できます。記録ターゲット数：'+pcRecords.length;
+      $('monitorStatus').textContent='実験終了。PC側でCSVを保存できます。記録ターゲット数：'+pcRecords.length;renderTrajectoryPlots();
     }
   }
 }
@@ -182,6 +197,7 @@ function downloadPcData(){
   for(const p of pcThumbSamples)rows.push([p.time,p.targetId,p.x,p.y,p.mappedX,p.mappedY,p.calibrated,p.hand]);
   rows.push([]);rows.push(['phone_camera_sample_time_ms','target_id','thumb_x_phone_camera_norm','thumb_y_phone_camera_norm']);
   for(const p of pcPhoneThumbSamples)rows.push([p.time,p.targetId,p.x,p.y]);
+  rows.push([]);rows.push(['target_sequence_id','target_x_game_norm','target_y_game_norm','target_side']);for(const t of pcTargetHistory)rows.push([t.id,t.x,t.y,t.x<0.5?'LEFT_HALF':'RIGHT_HALF']);
   rows.push([]);rows.push(['calibration_point','camera_x','camera_y','target_x','target_y']);
   calibrationPoints.forEach((p,i)=>{if(p)rows.push([i+1,p.cameraX,p.cameraY,p.targetX,p.targetY]);});
   rows.push([]);rows.push(['event_time','event']);for(const e of pcEvents)rows.push([e.time,e.text]);
@@ -209,6 +225,47 @@ $('calPoint2').addEventListener('click',()=>recordCalibrationPoint(1));
 $('calPoint3').addEventListener('click',()=>recordCalibrationPoint(2));
 $('calReset').addEventListener('click',resetCalibration);
 function mapCameraToGame(x,y){if(!calibrationTransform)return null;const a=calibrationTransform.x,b=calibrationTransform.y;return {x:a[0]*x+a[1]*y+a[2],y:b[0]*x+b[1]*y+b[2]};}
+
+function drawTrajectoryPlot(canvasId, points, opts={}){
+  const canvas=$(canvasId),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+  const pad={l:58,r:22,t:22,b:48},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+  ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+  for(let i=0;i<=10;i++){const x=pad.l+pw*i/10,y=pad.t+ph*i/10;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();}
+  ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.strokeRect(pad.l,pad.t,pw,ph);
+  ctx.fillStyle='#222';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('ゲーム画面 X（0〜1）',pad.l+pw/2,h-12);
+  ctx.save();ctx.translate(18,pad.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('ゲーム画面 Y（0〜1）',0,0);ctx.restore();
+  ctx.textAlign='center';ctx.font='12px sans-serif';for(let i=0;i<=5;i++){const v=i/5;ctx.fillText(v.toFixed(1),pad.l+pw*v,pad.t+ph+19);ctx.fillText(v.toFixed(1),pad.l-25,pad.t+ph-ph*v+4);}
+  const xy=p=>({x:pad.l+Math.max(0,Math.min(1,Number(p.x)))*pw,y:pad.t+Math.max(0,Math.min(1,Number(p.y)))*ph});
+  if(opts.leftHalf){ctx.fillStyle='#f3f7ff';ctx.fillRect(pad.l,pad.t,pw/2,ph);} else if(opts.rightHalf){ctx.fillStyle='#fff7f0';ctx.fillRect(pad.l+pw/2,pad.t,pw/2,ph);}
+  // redraw grid and border over the lightly shaded region
+  ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;for(let i=0;i<=10;i++){const x=pad.l+pw*i/10,y=pad.t+ph*i/10;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();}ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.strokeRect(pad.l,pad.t,pw,ph);
+  if(points.length){ctx.strokeStyle=opts.ideal?'#e53935':(opts.hand==='Left'?'#0077cc':'#00995e');ctx.lineWidth=opts.ideal?4:2.5;ctx.beginPath();const first=xy(points[0]);ctx.moveTo(first.x,first.y);for(let i=1;i<points.length;i++){const q=xy(points[i]);ctx.lineTo(q.x,q.y);}ctx.stroke();
+    if(opts.ideal){for(const p of points){const q=xy(p);ctx.fillStyle='#e53935';ctx.beginPath();ctx.arc(q.x,q.y,5,0,Math.PI*2);ctx.fill();}}
+    else {ctx.fillStyle=opts.hand==='Left'?'#0077cc':'#00995e';for(let i=0;i<points.length;i+=Math.max(1,Math.floor(points.length/150))){const q=xy(points[i]);ctx.beginPath();ctx.arc(q.x,q.y,2.5,0,Math.PI*2);ctx.fill();}}
+  }else{ctx.fillStyle='#555';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText(opts.ideal?'この側のターゲットなし':'実測データなし',pad.l+pw/2,pad.t+ph/2);}
+}
+function renderTrajectoryPlots(){
+  const targetMap=new Map(pcTargetHistory.map(t=>[Number(t.id),t]));
+  // Prefer target centers saved with successful hits; use the streamed history for the last/unhit target too.
+  for(const r of pcRecords){if(!targetMap.has(Number(r.targetId)))targetMap.set(Number(r.targetId),{id:Number(r.targetId),x:Number(r.targetX),y:Number(r.targetY)});}
+  const allTargets=[...targetMap.values()].filter(t=>Number.isFinite(t.x)&&Number.isFinite(t.y)).sort((a,b)=>a.id-b.id);
+  const leftTargets=allTargets.filter(t=>t.x<0.5),rightTargets=allTargets.filter(t=>t.x>=0.5);
+  const targetSide=new Map(allTargets.map(t=>[Number(t.id),t.x<0.5?'left':'right']));
+  const usable=pcThumbSamples.filter(p=>p.calibrated && Number.isFinite(Number(p.mappedX)) && Number.isFinite(Number(p.mappedY)) && targetSide.has(Number(p.targetId)));
+  const leftActual=usable.filter(p=>targetSide.get(Number(p.targetId))==='left' && /^left$/i.test(String(p.hand))).map(p=>({x:Number(p.mappedX),y:Number(p.mappedY),time:p.time}));
+  const rightActual=usable.filter(p=>targetSide.get(Number(p.targetId))==='right' && /^right$/i.test(String(p.hand))).map(p=>({x:Number(p.mappedX),y:Number(p.mappedY),time:p.time}));
+  drawTrajectoryPlot('plotIdealLeft',leftTargets,{ideal:true,leftHalf:true});
+  drawTrajectoryPlot('plotActualLeft',leftActual,{hand:'Left',leftHalf:true});
+  drawTrajectoryPlot('plotIdealRight',rightTargets,{ideal:true,rightHalf:true});
+  drawTrajectoryPlot('plotActualRight',rightActual,{hand:'Right',rightHalf:true});
+  $('trajectoryResults').classList.remove('hidden');
+  $('trajectoryNote').textContent=`ターゲット：左 ${leftTargets.length} 個／右 ${rightTargets.length} 個。キャリブレーション済み実測点：左手 ${leftActual.length} 点／右手 ${rightActual.length} 点。実測点が0の場合は、PCカメラで両手が認識されているか、キャリブレーションが完了しているか確認してください。`;
+  $('trajectoryResults').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function savePlot(canvasId){const canvas=$(canvasId);const a=document.createElement('a');a.download=canvasId+'.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();}
+document.querySelectorAll('[data-save-plot]').forEach(b=>b.addEventListener('click',()=>savePlot(b.dataset.savePlot)));
+$('saveAllPlots').addEventListener('click',()=>{['plotIdealLeft','plotActualLeft','plotIdealRight','plotActualRight'].forEach((id,i)=>setTimeout(()=>savePlot(id),i*350));});
 
 async function setupPcCamera(){
   try{
@@ -298,7 +355,7 @@ let pcHandStates=[
 ];
 function median(arr){return arr.slice().sort((a,b)=>a-b)[Math.floor(arr.length/2)]}
 function resetPcHandStates(){pcHandStates=[{x:null,y:null,history:[],lastX:null,lastY:null},{x:null,y:null,history:[],lastX:null,lastY:null}];}
-function handLabel(i,r){const h=r?.handednesses?.[i]?.[0];return h?(h.displayName||h.categoryName||('HAND '+(i+1))):('HAND '+(i+1));}
+function handLabel(i,r){const h=r?.handednesses?.[i]?.[0];if(!h)return 'HAND '+(i+1);const label=h.displayName||h.categoryName||('HAND '+(i+1));/* MediaPipe handedness assumes mirrored selfie input; this PC camera feed is unmirrored. */if(label==='Left')return 'Right';if(label==='Right')return 'Left';return label;}
 function processPcHand(r){
   const ctx=pcCameraCanvas.getContext('2d'),w=pcCamera.videoWidth||1280,h=pcCamera.videoHeight||720;
   if(pcCameraCanvas.width!==w||pcCameraCanvas.height!==h){pcCameraCanvas.width=w;pcCameraCanvas.height=h;}
@@ -312,7 +369,8 @@ function processPcHand(r){
     st.history.push({x:cx,y:cy});if(st.history.length>5)st.history.shift();
     const mx=median(st.history.map(p=>p.x)),my=median(st.history.map(p=>p.y)),a=.32;st.x=st.x===null?mx:st.x*(1-a)+mx*a;st.y=st.y===null?my:st.y*(1-a)+my*a;
     const x=Math.max(0,Math.min(1,st.x)),y=Math.max(0,Math.min(1,st.y)),label=handLabel(i,r);seen.push({x,y,label});
-    if(i===0){pcLatestThumb={x,y,label};if(pcTarget?.visible){const mapped=mapCameraToGame(x,y);pcThumbSamples.push({time:Date.now(),targetId:pcTarget.id,x,y,mappedX:mapped?.x??'',mappedY:mapped?.y??'',calibrated:!!mapped,hand:label});}}
+    if(i===0)pcLatestThumb={x,y,label};
+    if(pcTarget?.visible){const mapped=mapCameraToGame(x,y);pcThumbSamples.push({time:Date.now(),targetId:pcTarget.id,x,y,mappedX:mapped?.x??'',mappedY:mapped?.y??'',calibrated:!!mapped,hand:label});}
     ctx.lineWidth=Math.max(2,w/500);ctx.strokeStyle=i===0?'rgba(0,230,118,.78)':'rgba(0,180,255,.78)';ctx.fillStyle=i===0?'rgba(0,230,118,.9)':'rgba(0,180,255,.9)';
     for(const [a,b] of HAND_CONNECTIONS){ctx.beginPath();ctx.moveTo(lm[a].x*w,lm[a].y*h);ctx.lineTo(lm[b].x*w,lm[b].y*h);ctx.stroke();}
     for(let j=0;j<lm.length;j++){ctx.beginPath();ctx.arc(lm[j].x*w,lm[j].y*h,j===4?11:5,0,Math.PI*2);ctx.fill();}
@@ -363,7 +421,7 @@ function questionnaireSubmit(e){e.preventDefault();e.stopPropagation();const req
 qButton.addEventListener('pointerdown',questionnaireSubmit);
 
 function generateTarget(){const r=game.getBoundingClientRect(),margin=48;const x=margin+Math.random()*Math.max(1,r.width-margin*2),y=margin+Math.random()*Math.max(1,r.height-margin*2);target.style.left=x+'px';target.style.top=y+'px';target.style.display='block';targetId++;currentPath=[];lastPathSample=0;spawnTime=performance.now();send({type:'state',time:Math.max(0,Math.ceil(GAME_DURATION-(spawnTime-startTime)/1000)),score,reaction:avg(),level:level(),targetVisible:true,target:{id:targetId,x:x/r.width,y:y/r.height}});}
-function startGame(){score=0;reactionTimes=[];records=[];previousTargetCenter=null;startTime=performance.now();gameRunning=true;send({type:'experimentStart',questionnaire:qData,startedAt:new Date().toISOString()});startCard.classList.add('hidden');resultCard.classList.add('hidden');if($('codeBox')) $('codeBox').style.display='none'; if($('startCodeBox')) $('startCodeBox').style.display='none';ui();generateTarget();send({type:'event',text:'GAME START'});clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
+function startGame(){score=0;reactionTimes=[];records=[];previousTargetCenter=null;startTime=performance.now();gameRunning=true;send({type:'experimentStart',questionnaire:qData,startedAt:new Date().toISOString()});startCard.classList.add('hidden');resultCard.classList.add('hidden');if($('codeBox')) $('codeBox').style.display='none'; if($('startCodeBox')) $('startCodeBox').style.display='none';ui();send({type:'event',text:'GAME START'});generateTarget();clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
 function hitTarget(){if(!gameRunning)return;const tap=performance.now(),reaction=(tap-spawnTime)/1000;reactionTimes.push(reaction);score++;const r=game.getBoundingClientRect();const tx=parseFloat(target.style.left),ty=parseFloat(target.style.top);const center={x:tx/r.width,y:ty/r.height};const targetDistance=previousTargetCenter?Math.hypot(center.x-previousTargetCenter.x,center.y-previousTargetCenter.y):null;records.push({targetId,reactionTime:reaction,targetX:center.x,targetY:center.y,targetDistance,previousTargetX:previousTargetCenter?.x??null,previousTargetY:previousTargetCenter?.y??null,path:currentPath.slice(),pathPointCount:currentPath.length});previousTargetCenter=center;target.classList.add('hit');setTimeout(()=>target.classList.remove('hit'),70);send({type:'event',text:'TARGET #'+targetId+' HIT / reaction '+reaction.toFixed(3)+'s',record:records[records.length-1]});ui();generateTarget();}
 function checkTap(e){if(!gameRunning)return;const now=performance.now();if(now-lastTapTime<100)return;const p=e.touches?.[0]||e,r=target.getBoundingClientRect();if(p.clientX>=r.left&&p.clientX<=r.right&&p.clientY>=r.top&&p.clientY<=r.bottom){if(e.cancelable)e.preventDefault();lastTapTime=now;hitTarget()}}
 target.addEventListener('pointerdown',checkTap);target.addEventListener('click',checkTap);game.addEventListener('pointerdown',checkTap);game.addEventListener('click',checkTap);game.addEventListener('touchstart',checkTap,{passive:false});
