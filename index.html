@@ -66,7 +66,17 @@
 <div id="cameraPanel" class="hidden"><div class="camera-wrap"><video id="camera" autoplay playsinline muted></video><canvas id="cameraCanvas"></canvas></div><div class="camera-label">カメラ・親指追跡</div><div id="codeBox" style="margin:10px 0;padding:12px;border-radius:12px;background:#171b22;border:2px solid #00d9ff;text-align:center"><div style="font-size:13px;color:#aaa">PCモニター接続用 6桁コード</div><div id="phoneCode" style="font-size:32px;font-weight:800;letter-spacing:6px;color:#00d9ff">------</div><div style="font-size:12px;color:#aaa;margin-top:4px">この数字をPCモニターに入力してください</div></div><div id="trackingStatus" class="tracking-status">準備中</div></div>
 
 <div id="monitorPanel" class="hidden">
-  <div class="panel"><h2>PCモニター接続</h2><div class="small">スマホのカメラを使ってMediaPipeで親指の位置を取得し、ゲーム中の親指軌跡を記録します。</div><div>スマホ画面に表示されたコード：</div><div id="monitorCode" class="code">------</div><div id="monitorStatus" class="status">接続待ち</div><button id="monitorBack" class="secondary">戻る</button></div>
+  <div class="panel"><h2>PCモニター接続</h2><div class="small">スマホのカメラを使ってMediaPipeで親指の位置を取得し、ゲーム中の親指軌跡を記録します。</div><div>スマホ画面に表示されたコード：</div><div id="monitorCode" class="code">------</div><div id="monitorStatus" class="status">接続待ち</div><button id="pcDownloadButton" class="hidden" style="margin-top:10px">PCで実験データを保存（CSV）</button><button id="monitorBack" class="secondary">戻る</button></div>
+  <div class="panel" id="calibrationPanel" style="margin-top:14px">
+    <h2>親指座標のキャリブレーション</h2>
+    <div class="small">スマホ画面の指定位置に親指を置き、その位置を保ったままPCの対応する「記録」ボタンを押してください。3点からカメラ座標→ゲーム画面座標のアフィン変換を求めます。カメラに親指が認識されている必要があります。</div>
+    <div class="monitor-stats" style="margin-top:10px">
+      <div class="monitor-stat"><span>POINT 1</span><b>左上寄り (10%, 10%)</b><button id="calPoint1" class="secondary">記録 1</button></div>
+      <div class="monitor-stat"><span>POINT 2</span><b>右上寄り (90%, 10%)</b><button id="calPoint2" class="secondary">記録 2</button></div>
+      <div class="monitor-stat"><span>POINT 3</span><b>左下寄り (10%, 90%)</b><button id="calPoint3" class="secondary">記録 3</button></div>
+      <div class="monitor-stat"><span>STATUS</span><b id="calStatus" style="font-size:13px">未実施</b><button id="calReset" class="secondary">やり直す</button></div>
+    </div>
+  </div>
   <div class="monitor-layout" style="margin-top:14px">
     <div class="panel"><h2>外付けカメラ・親指追跡</h2><div class="monitor-camera"><video id="pcCamera" autoplay playsinline muted></video><canvas id="pcCameraCanvas"></canvas></div><div style="margin-top:8px"><select id="pcCameraSelect" style="width:100%;padding:9px;border-radius:8px;background:#171a1f;color:#fff;border:1px solid #555"><option>カメラを選択</option></select></div><div id="pcCameraStatus" class="camera-readout">カメラ起動中…</div><div id="pcThumbCoord" class="camera-readout">親指座標：-- / --　軌跡：0 points</div></div>
     <div class="panel"><h2>ゲーム画面</h2><div id="monitorGame" class="monitor-game"><div id="monitorTarget" class="monitor-target" style="display:none"></div><svg id="pathSvg" class="path-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline id="pathLine" points="" fill="none" stroke="#00e676" stroke-width="1.2"/></svg><div id="thumbDot" class="thumb-dot" style="display:none"></div></div></div>
@@ -90,7 +100,10 @@ const pcCamera=$('pcCamera'), pcCameraCanvas=$('pcCameraCanvas'), pcCameraStatus
 let mode=null, peer=null, conn=null, handLandmarker=null, mediaStream=null, tracking=false, lastVideoTime=-1;
 let pcHandLandmarker=null, pcMediaStream=null, pcTracking=false, pcLastVideoTime=-1, pcPath=[], pcLastX=null, pcLastY=null;
 let score=0,reactionTimes=[],records=[],startTime=0,spawnTime=0,gameRunning=false,timerId=null,targetId=0,currentPath=[],lastThumb=null,lastPathSample=0,lastTapTime=0;
-let qData={};
+let qData={}; let previousTargetCenter=null;
+let pcExperiment={}; let pcRecords=[]; let pcEvents=[]; let pcThumbSamples=[]; let pcTarget=null;
+let pcLatestThumb=null, calibrationPoints=[], calibrationTransform=null, pcPhoneThumbSamples=[];
+const calibrationTargets=[{x:.1,y:.1},{x:.9,y:.1},{x:.1,y:.9}];
 
 function avg(){return reactionTimes.length?reactionTimes.reduce((a,b)=>a+b,0)/reactionTimes.length:0}
 function level(){const a=avg();return a<.30?'PRO':a<.55?'INTERMEDIATE':'BEGINNER'}
@@ -127,21 +140,75 @@ function monitorMouseHit(e){e.preventDefault();e.stopPropagation();if(!monitorTa
 monitorTarget.addEventListener('pointerdown',monitorMouseHit);
 monitorTarget.addEventListener('click',monitorMouseHit);
 function handleMonitorData(m){
-  if(m.type==='state'){
-    $('mTime').textContent=m.time;$('mScore').textContent=m.score;$('mReaction').textContent=m.reaction.toFixed(2)+'s';$('mLevel').textContent=m.level;
+  if(m.type==='experimentStart'){
+    pcExperiment=m.questionnaire||{};pcExperiment.startedAt=m.startedAt||new Date().toISOString();
+    pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];$('pcDownloadButton').classList.add('hidden');
+    $('monitorStatus').textContent='接続しました。実験データを受信中です。';
+  } else if(m.type==='state'){
+    $('mTime').textContent=m.time;$('mScore').textContent=m.score;$('mReaction').textContent=Number(m.reaction||0).toFixed(2)+'s';$('mLevel').textContent=m.level;
     monitorTarget.style.display=m.targetVisible?'block':'none';monitorTarget.style.left=(m.target.x*100)+'%';monitorTarget.style.top=(m.target.y*100)+'%';
-    $('mTargetInfo').textContent='Target #'+m.target.id+' / x='+m.target.x.toFixed(3)+' y='+m.target.y.toFixed(3);
+    $('mTargetInfo').textContent='Target #'+m.target.id+' / x='+Number(m.target.x).toFixed(3)+' y='+Number(m.target.y).toFixed(3);
+    pcTarget={id:m.target.id,x:m.target.x,y:m.target.y,time:Date.now(),visible:m.targetVisible};
   } else if(m.type==='thumb'){
     thumbDot.style.display='block';thumbDot.style.left=(m.x*100)+'%';thumbDot.style.top=(m.y*100)+'%';
     $('mPathInfo').textContent=m.count+' points / Target #'+m.targetId;
     pathLine.setAttribute('points',m.path.map(p=>(p.x*100).toFixed(2)+','+(p.y*100).toFixed(2)).join(' '));
+    pcPhoneThumbSamples.push({time:Date.now(),targetId:m.targetId,x:m.x,y:m.y});
   } else if(m.type==='event'){
     $('monitorStatus').textContent=m.text;
-    if(m.text==='GAME START'){pcPath=[];pcLastX=null;pcLastY=null;}
-    if(m.text==='GAME END'){pcPath=[];pcLastX=null;pcLastY=null;}
-    if(m.type==='event'&&m.text==='GAME END') pathLine.setAttribute('points','');
+    pcEvents.push({time:new Date().toISOString(),text:m.text});
+    if(m.record){pcRecords.push(m.record);}
+    if(m.text==='GAME START'){pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];pcPath=[];pcLastX=null;pcLastY=null;}
+    if(m.text==='GAME END'){
+      pathLine.setAttribute('points','');
+      $('pcDownloadButton').classList.remove('hidden');
+      $('monitorStatus').textContent='実験終了。PC側でCSVを保存できます。記録ターゲット数：'+pcRecords.length;
+    }
   }
 }
+function csvEscape(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+function pathMetrics(path){
+  if(!Array.isArray(path)||path.length<2)return {actualDistance:0,idealDistance:0,meanLineError:0,efficiency:''};
+  let actual=0;for(let i=1;i<path.length;i++)actual+=Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y);
+  const a=path[0],b=path[path.length-1],ideal=Math.hypot(b.x-a.x,b.y-a.y);
+  let err=0;for(const p of path){const dx=b.x-a.x,dy=b.y-a.y,den=dx*dx+dy*dy;let t=den?((p.x-a.x)*dx+(p.y-a.y)*dy)/den:0;t=Math.max(0,Math.min(1,t));err+=Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));}
+  return {actualDistance:actual,idealDistance:ideal,meanLineError:err/path.length,efficiency:actual>0?(ideal/actual):''};
+}
+function downloadPcData(){
+  const rows=[['section','field','value'],['summary','started_at',pcExperiment.startedAt||''],...Object.entries(pcExperiment).filter(([k])=>k!=='startedAt').map(([k,v])=>['questionnaire',k,v]),['summary','target_count',pcRecords.length]];
+  rows.push([]);rows.push(['target_id','reaction_time_sec','target_x','target_y','target_distance_normalized','path_point_count','thumb_path_json','actual_thumb_distance_norm','straight_thumb_distance_norm','mean_deviation_from_thumb_start_end_line_norm','movement_efficiency']);
+  for(const r of pcRecords){const met=pathMetrics(r.path);rows.push([r.targetId,r.reactionTime,r.targetX,r.targetY,r.targetDistance??'',r.pathPointCount,JSON.stringify(r.path||[]),met.actualDistance,met.idealDistance,met.meanLineError,met.efficiency]);}
+  rows.push([]);rows.push(['pc_camera_sample_time_ms','target_id','thumb_x_camera_norm','thumb_y_camera_norm','thumb_x_game_norm_calibrated','thumb_y_game_norm_calibrated','calibration_applied','hand']);
+  for(const p of pcThumbSamples)rows.push([p.time,p.targetId,p.x,p.y,p.mappedX,p.mappedY,p.calibrated,p.hand]);
+  rows.push([]);rows.push(['phone_camera_sample_time_ms','target_id','thumb_x_phone_camera_norm','thumb_y_phone_camera_norm']);
+  for(const p of pcPhoneThumbSamples)rows.push([p.time,p.targetId,p.x,p.y]);
+  rows.push([]);rows.push(['calibration_point','camera_x','camera_y','target_x','target_y']);
+  calibrationPoints.forEach((p,i)=>{if(p)rows.push([i+1,p.cameraX,p.cameraY,p.targetX,p.targetY]);});
+  rows.push([]);rows.push(['event_time','event']);for(const e of pcEvents)rows.push([e.time,e.text]);
+  const csv='\uFEFF'+rows.map(row=>row.map(pcCsvEscape).join(',')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='reflex_pc_experiment_data.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+$('pcDownloadButton').addEventListener('click',downloadPcData);
+function solve3(a,b){
+  const m=a.map((row,i)=>[...row,b[i]]);
+  for(let c=0;c<3;c++){let pivot=c;for(let r=c+1;r<3;r++)if(Math.abs(m[r][c])>Math.abs(m[pivot][c]))pivot=r;if(Math.abs(m[pivot][c])<1e-8)throw new Error('3点の位置関係が不適切です');[m[c],m[pivot]]=[m[pivot],m[c]];const d=m[c][c];for(let j=c;j<4;j++)m[c][j]/=d;for(let r=0;r<3;r++){if(r===c)continue;const f=m[r][c];for(let j=c;j<4;j++)m[r][j]-=f*m[c][j];}}
+  return m.map(row=>row[3]);
+}
+function recordCalibrationPoint(i){
+  if(!pcLatestThumb){$('calStatus').textContent='親指を認識できません';return;}
+  calibrationPoints[i]={cameraX:pcLatestThumb.x,cameraY:pcLatestThumb.y,targetX:calibrationTargets[i].x,targetY:calibrationTargets[i].y};
+  $('calStatus').textContent=calibrationPoints.filter(Boolean).length+'/3点を記録';
+  if(calibrationPoints.filter(Boolean).length===3){
+    try{const a=calibrationPoints.map(p=>[p.cameraX,p.cameraY,1]);const tx=solve3(a,calibrationPoints.map(p=>p.targetX));const ty=solve3(a,calibrationPoints.map(p=>p.targetY));calibrationTransform={x:tx,y:ty};$('calStatus').textContent='完了：座標変換を適用中';$('monitorStatus').textContent='キャリブレーション完了。実験を開始できます。';}
+    catch(e){calibrationTransform=null;$('calStatus').textContent='失敗：3点を離して再記録';}
+  }
+}
+function resetCalibration(){calibrationPoints=[];calibrationTransform=null;$('calStatus').textContent='未実施';}
+$('calPoint1').addEventListener('click',()=>recordCalibrationPoint(0));
+$('calPoint2').addEventListener('click',()=>recordCalibrationPoint(1));
+$('calPoint3').addEventListener('click',()=>recordCalibrationPoint(2));
+$('calReset').addEventListener('click',resetCalibration);
+function mapCameraToGame(x,y){if(!calibrationTransform)return null;const a=calibrationTransform.x,b=calibrationTransform.y;return {x:a[0]*x+a[1]*y+a[2],y:b[0]*x+b[1]*y+b[2]};}
 
 async function setupPcCamera(){
   try{
@@ -245,6 +312,7 @@ function processPcHand(r){
     st.history.push({x:cx,y:cy});if(st.history.length>5)st.history.shift();
     const mx=median(st.history.map(p=>p.x)),my=median(st.history.map(p=>p.y)),a=.32;st.x=st.x===null?mx:st.x*(1-a)+mx*a;st.y=st.y===null?my:st.y*(1-a)+my*a;
     const x=Math.max(0,Math.min(1,st.x)),y=Math.max(0,Math.min(1,st.y)),label=handLabel(i,r);seen.push({x,y,label});
+    if(i===0){pcLatestThumb={x,y,label};if(pcTarget?.visible){const mapped=mapCameraToGame(x,y);pcThumbSamples.push({time:Date.now(),targetId:pcTarget.id,x,y,mappedX:mapped?.x??'',mappedY:mapped?.y??'',calibrated:!!mapped,hand:label});}}
     ctx.lineWidth=Math.max(2,w/500);ctx.strokeStyle=i===0?'rgba(0,230,118,.78)':'rgba(0,180,255,.78)';ctx.fillStyle=i===0?'rgba(0,230,118,.9)':'rgba(0,180,255,.9)';
     for(const [a,b] of HAND_CONNECTIONS){ctx.beginPath();ctx.moveTo(lm[a].x*w,lm[a].y*h);ctx.lineTo(lm[b].x*w,lm[b].y*h);ctx.stroke();}
     for(let j=0;j<lm.length;j++){ctx.beginPath();ctx.arc(lm[j].x*w,lm[j].y*h,j===4?11:5,0,Math.PI*2);ctx.fill();}
@@ -295,15 +363,15 @@ function questionnaireSubmit(e){e.preventDefault();e.stopPropagation();const req
 qButton.addEventListener('pointerdown',questionnaireSubmit);
 
 function generateTarget(){const r=game.getBoundingClientRect(),margin=48;const x=margin+Math.random()*Math.max(1,r.width-margin*2),y=margin+Math.random()*Math.max(1,r.height-margin*2);target.style.left=x+'px';target.style.top=y+'px';target.style.display='block';targetId++;currentPath=[];lastPathSample=0;spawnTime=performance.now();send({type:'state',time:Math.max(0,Math.ceil(GAME_DURATION-(spawnTime-startTime)/1000)),score,reaction:avg(),level:level(),targetVisible:true,target:{id:targetId,x:x/r.width,y:y/r.height}});}
-function startGame(){score=0;reactionTimes=[];records=[];startTime=performance.now();gameRunning=true;startCard.classList.add('hidden');resultCard.classList.add('hidden');if($('codeBox')) $('codeBox').style.display='none'; if($('startCodeBox')) $('startCodeBox').style.display='none';ui();generateTarget();send({type:'event',text:'GAME START'});clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
-function hitTarget(){if(!gameRunning)return;const tap=performance.now(),reaction=(tap-spawnTime)/1000;reactionTimes.push(reaction);score++;const r=game.getBoundingClientRect();const tx=parseFloat(target.style.left),ty=parseFloat(target.style.top);records.push({targetId,reactionTime:reaction,targetX:tx/r.width,targetY:ty/r.height,path:currentPath.slice(),pathPointCount:currentPath.length});target.classList.add('hit');setTimeout(()=>target.classList.remove('hit'),70);send({type:'event',text:'TARGET #'+targetId+' HIT / reaction '+reaction.toFixed(3)+'s',record:records[records.length-1]});ui();generateTarget();}
+function startGame(){score=0;reactionTimes=[];records=[];previousTargetCenter=null;startTime=performance.now();gameRunning=true;send({type:'experimentStart',questionnaire:qData,startedAt:new Date().toISOString()});startCard.classList.add('hidden');resultCard.classList.add('hidden');if($('codeBox')) $('codeBox').style.display='none'; if($('startCodeBox')) $('startCodeBox').style.display='none';ui();generateTarget();send({type:'event',text:'GAME START'});clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
+function hitTarget(){if(!gameRunning)return;const tap=performance.now(),reaction=(tap-spawnTime)/1000;reactionTimes.push(reaction);score++;const r=game.getBoundingClientRect();const tx=parseFloat(target.style.left),ty=parseFloat(target.style.top);const center={x:tx/r.width,y:ty/r.height};const targetDistance=previousTargetCenter?Math.hypot(center.x-previousTargetCenter.x,center.y-previousTargetCenter.y):null;records.push({targetId,reactionTime:reaction,targetX:center.x,targetY:center.y,targetDistance,previousTargetX:previousTargetCenter?.x??null,previousTargetY:previousTargetCenter?.y??null,path:currentPath.slice(),pathPointCount:currentPath.length});previousTargetCenter=center;target.classList.add('hit');setTimeout(()=>target.classList.remove('hit'),70);send({type:'event',text:'TARGET #'+targetId+' HIT / reaction '+reaction.toFixed(3)+'s',record:records[records.length-1]});ui();generateTarget();}
 function checkTap(e){if(!gameRunning)return;const now=performance.now();if(now-lastTapTime<100)return;const p=e.touches?.[0]||e,r=target.getBoundingClientRect();if(p.clientX>=r.left&&p.clientX<=r.right&&p.clientY>=r.top&&p.clientY<=r.bottom){if(e.cancelable)e.preventDefault();lastTapTime=now;hitTarget()}}
 target.addEventListener('pointerdown',checkTap);target.addEventListener('click',checkTap);game.addEventListener('pointerdown',checkTap);game.addEventListener('click',checkTap);game.addEventListener('touchstart',checkTap,{passive:false});
 startButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();startGame()});
 restartButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();resultCard.classList.add('hidden');startCard.classList.remove('hidden')});
 
 function endGame(){if(!gameRunning)return;gameRunning=false;clearInterval(timerId);target.style.display='none';$('time').textContent='0';$('finalScore').textContent=score;$('finalAvg').textContent=avg().toFixed(2)+'s';$('finalLevel').textContent=level();resultCard.classList.remove('hidden');send({type:'event',text:'GAME END'});send({type:'state',time:0,score,reaction:avg(),level:level(),targetVisible:false,target:{id:targetId,x:0,y:0}});}
-function csvEscape(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+function pcCsvEscape(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
 function downloadData(){const rows=[['experiment','value'],['age',qData.ageGroup],['handedness',qData.handedness],['daily_game_time',qData.dailyGameTime],['smartphone_game_frequency',qData.smartphoneGameFrequency],['game_experience',qData.gameExperience],['favorite_game',qData.favoriteGame],['total_score',score],['average_reaction_sec',avg().toFixed(4)],['level',level()]];rows.push([]);rows.push(['target_id','reaction_time_sec','target_x','target_y','path_point_count','path_json']);for(const r of records)rows.push([r.targetId,r.reactionTime.toFixed(4),r.targetX.toFixed(5),r.targetY.toFixed(5),r.pathPointCount,JSON.stringify(r.path)]);const csv='\uFEFF'+rows.map(x=>x.map(csvEscape).join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='reflex_media_experiment_data.csv';document.body.appendChild(a);a.click();a.remove()}
 downloadButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();downloadData()});
 
