@@ -34,6 +34,22 @@
 #phoneCalButtons button{flex:1}
 #phoneCalCancel{background:#333}
 
+/* スマホ実験はヘッダーをなくし、ゲーム・アンケート・キャリブレーションを画面全体に表示 */
+html.phone-mode, body.phone-mode{width:100%;height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none}
+body.phone-mode #app{width:100%;height:100%;height:100dvh;min-height:0;overflow:hidden}
+body.phone-mode #top, body.phone-mode #hint{display:none!important}
+body.phone-mode #game{position:fixed;inset:0;width:100%;height:100%;height:100dvh;min-height:0;margin:0;border:0;border-radius:0;overflow:hidden;padding:0}
+body.phone-mode #message{position:absolute;inset:0}
+body.phone-mode #questionnaire{position:absolute;inset:0;padding:12px;overflow-y:auto;overscroll-behavior:contain}
+body.phone-mode .question-card{width:100%;max-width:520px;max-height:calc(100dvh - 24px);padding:18px}
+body.phone-mode #phoneCalibration{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;padding:0;overflow:hidden}
+body.phone-mode #phoneCalCard{width:100%;height:100%;height:100dvh;min-height:0;max-height:none;border:0;border-radius:0;padding: max(18px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));}
+body.phone-mode #phoneCalStage{flex:1;min-height:0;margin:12px 0;border-radius:12px}
+body.phone-mode #phoneCalInstruction{font-size:clamp(15px,4vw,20px);min-height:0}
+body.phone-mode #phoneCalTarget{width:clamp(76px,20vw,96px);height:clamp(76px,20vw,96px)}
+body.phone-mode #phoneCalButtons{padding-bottom:env(safe-area-inset-bottom)}
+body.phone-mode #target{width:clamp(54px,14vw,68px);height:clamp(54px,14vw,68px)}
+body.phone-mode #result{max-height:calc(100dvh - 28px);overflow:auto}
 @media(max-width:1000px){.monitor-layout{grid-template-columns:1fr 1fr}}@media(max-width:700px){.monitor-layout{grid-template-columns:1fr}.mode-grid{grid-template-columns:1fr}.monitor-game{height:300px}#cameraPanel{width:130px}}
 
 #trajectoryResults{margin-top:14px}.trajectory-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.trajectory-card{background:#101318;border:1px solid #353a41;border-radius:14px;padding:12px;min-width:0}.trajectory-card h3{font-size:15px;margin:0 0 8px}.trajectory-card canvas{display:block;width:100%;height:auto;background:#fff;border-radius:8px}.trajectory-card button{margin-top:8px}.trajectory-note{font-size:12px;color:#aeb6c0;margin:8px 0 0}.trajectory-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}@media(max-width:900px){.trajectory-grid{grid-template-columns:1fr}.monitor-layout{grid-template-columns:1fr}}
@@ -160,7 +176,7 @@ function randomCode(){return String(Math.floor(100000+Math.random()*900000))}
 
 function resetGameView(){startCard.classList.remove('hidden');resultCard.classList.add('hidden');target.style.display='none';questionnaire.style.display='flex'}
 
-$('phoneMode').addEventListener('click',async()=>{mode='phone';modeSelect.classList.add('hidden');$('top').classList.remove('hidden');$('game').classList.remove('hidden');questionnaire.style.display='flex';cameraPanel.classList.remove('hidden');const code=randomCode();$('phoneCode').textContent=code;$('startPhoneCode').textContent=code;$('trackingStatus').textContent='この6桁コードをPCモニターに入力してください';await setupPeerPhone();await setupCamera();});
+$('phoneMode').addEventListener('click',async()=>{mode='phone';document.documentElement.classList.add('phone-mode');document.body.classList.add('phone-mode');modeSelect.classList.add('hidden');$('top').classList.add('hidden');$('game').classList.remove('hidden');questionnaire.style.display='flex';cameraPanel.classList.remove('hidden');const code=randomCode();$('phoneCode').textContent=code;$('startPhoneCode').textContent=code;$('trackingStatus').textContent='この6桁コードをPCモニターに入力してください';await setupPeerPhone();await setupCamera();});
 $('pcMode').addEventListener('click',async()=>{mode='pc';modeSelect.classList.add('hidden');$('top').classList.add('hidden');$('game').classList.add('hidden');$('hint').classList.add('hidden');monitorPanel.classList.remove('hidden');setupPeerMonitor();await setupPcCamera();});
 $('monitorBack').addEventListener('click',()=>location.reload());
 
