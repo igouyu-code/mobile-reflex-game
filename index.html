@@ -16,6 +16,24 @@
 #cameraPanel{display:none !important;position:fixed;right:12px;bottom:50px;width:min(180px,38vw);z-index:15;background:#111;border:1px solid #444;border-radius:12px;padding:6px}.camera-wrap{position:relative}.camera-wrap video{display:block;width:100%;border-radius:8px;transform:scaleX(-1)}#cameraCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1)}.camera-label{font-size:10px;color:#aaa;text-align:center;padding:3px}.tracking-status{font-size:10px;color:#0f0;text-align:center}
 #dataPanel{margin:12px 10px;padding:14px;background:#101318;border:1px solid #353a41;border-radius:16px}.data-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #24282d;font-size:12px}.data-row:last-child{border-bottom:0}.data-row span{color:#9aa3ad}.data-row b{text-align:right}.small{font-size:11px;color:#8f98a2;line-height:1.5}
 #hint{height:36px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;flex-shrink:0}
+
+#phoneCalibration{position:absolute;inset:0;z-index:25;background:rgba(5,9,15,.98);display:flex;align-items:center;justify-content:center;padding:14px}
+#phoneCalibration.hidden{display:none!important}
+#phoneCalCard{position:relative;width:100%;height:100%;min-height:420px;max-height:760px;border:1px solid #334155;border-radius:18px;background:radial-gradient(circle at center,#172438,#080a0d 72%);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:22px 16px 16px;text-align:center}
+#phoneCalTitle{font-size:22px;margin:4px 0 8px}
+#phoneCalInstruction{font-size:15px;line-height:1.6;color:#e5edf8;max-width:520px;min-height:48px}
+#phoneCalProgress{font-size:12px;color:#93c5fd;margin:8px 0}
+#phoneCalStage{position:relative;flex:1;width:100%;min-height:220px;margin:8px 0;border:1px dashed #334155;border-radius:14px;background:rgba(15,23,42,.4);overflow:hidden}
+#phoneCalTarget{position:absolute;width:84px;height:84px;border:3px solid #60a5fa;border-radius:50%;background:rgba(37,99,235,.18);transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;animation:calPulse 1s ease-in-out infinite;cursor:pointer;touch-action:manipulation}
+#phoneCalTarget:before{content:"";position:absolute;width:54px;height:54px;border-radius:50%;border:2px dashed #bfdbfe}
+#phoneCalTarget:after{content:"";position:absolute;width:22px;height:22px;border-radius:50%;background:#60a5fa;box-shadow:0 0 18px #3b82f6}
+#phoneCalTarget .mock-thumb{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);font-size:29px;filter:drop-shadow(0 0 7px #60a5fa);pointer-events:none}
+@keyframes calPulse{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,.45)}50%{box-shadow:0 0 0 13px rgba(59,130,246,0)}}
+#phoneCalStatus{font-size:12px;line-height:1.5;color:#9ca3af;min-height:36px;margin:4px 0}
+#phoneCalButtons{width:100%;display:flex;gap:8px;margin-top:6px}
+#phoneCalButtons button{flex:1}
+#phoneCalCancel{background:#333}
+
 @media(max-width:1000px){.monitor-layout{grid-template-columns:1fr 1fr}}@media(max-width:700px){.monitor-layout{grid-template-columns:1fr}.mode-grid{grid-template-columns:1fr}.monitor-game{height:300px}#cameraPanel{width:130px}}
 
 #trajectoryResults{margin-top:14px}.trajectory-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.trajectory-card{background:#101318;border:1px solid #353a41;border-radius:14px;padding:12px;min-width:0}.trajectory-card h3{font-size:15px;margin:0 0 8px}.trajectory-card canvas{display:block;width:100%;height:auto;background:#fff;border-radius:8px}.trajectory-card button{margin-top:8px}.trajectory-note{font-size:12px;color:#aeb6c0;margin:8px 0 0}.trajectory-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}@media(max-width:900px){.trajectory-grid{grid-template-columns:1fr}.monitor-layout{grid-template-columns:1fr}}
@@ -58,6 +76,18 @@
     </div>
   </div>
   <div id="target"></div>
+  <div id="phoneCalibration" class="hidden">
+    <div id="phoneCalCard">
+      <h1 id="phoneCalTitle">キャリブレーション準備</h1>
+      <div id="phoneCalInstruction">PC側のカメラで親指が認識されていることを確認してください。準備ができたら「開始」を押します。</div>
+      <div id="phoneCalProgress">準備 0 / 3</div>
+      <div id="phoneCalStage">
+        <button id="phoneCalTarget" aria-label="キャリブレーション位置をタップ"><span class="mock-thumb">👍</span></button>
+      </div>
+      <div id="phoneCalStatus">PCモニターと接続し、カメラで親指を認識できる状態にしてください。</div>
+      <div id="phoneCalButtons"><button id="phoneCalBegin">キャリブレーション開始</button><button id="phoneCalCancel" class="secondary">戻る</button></div>
+    </div>
+  </div>
   <div id="message">
     <div id="startCard" class="card hidden"><h1>REFLEX GAME</h1><div id="startCodeBox" style="margin:14px 0;padding:14px;border-radius:12px;background:#171b22;border:2px solid #00d9ff;text-align:center"><div style="font-size:13px;color:#aaa">PCモニター接続用 6桁コード</div><div id="startPhoneCode" style="font-size:36px;font-weight:800;letter-spacing:7px;color:#00d9ff">------</div><div style="font-size:12px;color:#aaa;margin-top:5px">この数字をPCモニターに入力してください</div></div><p>赤いターゲットが表示されたら、できるだけ早くタップしてください。<br>制限時間は20秒です。</p><button id="startButton">START</button></div>
     <div id="result" class="card hidden"><h1>RESULT</h1><p>SCORE</p><div id="finalScore" style="font-size:36px;font-weight:bold;color:#00e676">0</div><p>AVERAGE REACTION</p><div id="finalAvg" style="font-size:30px;color:#00d9ff">0.00s</div><p>LEVEL</p><div id="finalLevel" style="font-size:28px;color:#ff9800">BEGINNER</div><button id="downloadDataButton">実験データを保存（CSV）</button><button id="restartButton" class="secondary">PLAY AGAIN</button></div>
@@ -118,6 +148,9 @@ let qData={}; let previousTargetCenter=null;
 let pcExperiment={}; let pcRecords=[]; let pcEvents=[]; let pcThumbSamples=[]; let pcTarget=null; let pcTargetHistory=[];
 let pcLatestThumb=null, calibrationPoints=[], calibrationTransform=null, pcPhoneThumbSamples=[];
 const calibrationTargets=[{x:.1,y:.1},{x:.9,y:.1},{x:.1,y:.9}];
+const phoneCalTargets=[{x:.12,y:.16,label:'左上'},{x:.88,y:.16,label:'右上'},{x:.12,y:.84,label:'左下'}];
+let phoneCalIndex=-1,phoneCalWaiting=false,phoneCalDone=false;
+
 
 function avg(){return reactionTimes.length?reactionTimes.reduce((a,b)=>a+b,0)/reactionTimes.length:0}
 function level(){const a=avg();return a<.30?'PRO':a<.55?'INTERMEDIATE':'BEGINNER'}
@@ -141,7 +174,18 @@ async function setupPeerPhone(){
   peer.on('connection',c=>{conn=c;conn.on('open',()=>{send({type:'hello',duration:GAME_DURATION});$('trackingStatus').textContent='PC接続済み・MediaPipe追跡中'});conn.on('data',handlePhoneCommand);conn.on('close',()=>{$('trackingStatus').textContent='PC接続が切れました'});});
   peer.on('error',e=>console.warn(e));
 }
-function handlePhoneCommand(m){if(m&&m.type==='pcHit'){hitTarget();}}
+function handlePhoneCommand(m){
+  if(m&&m.type==='pcHit'){hitTarget();return;}
+  if(m&&m.type==='phoneCalibrationAck'){
+    if(!phoneCalWaiting)return;
+    phoneCalWaiting=false;
+    if(!m.ok){$('phoneCalStatus').textContent=m.message||'親指を認識できません。位置を調整して、もう一度タップしてください。';return;}
+    phoneCalIndex++;
+    if(phoneCalIndex>=phoneCalTargets.length){finishPhoneCalibration();return;}
+    showPhoneCalTarget();
+    $('phoneCalStatus').textContent='記録しました。次の位置へ進みます。';
+  }
+}
 function setupPeerMonitor(){
   const code=prompt('スマホに表示されている6桁コードを入力してください');
   if(!code||!/^\d{6}$/.test(code)){ $('monitorStatus').textContent='6桁コードが必要です'; return }
@@ -154,6 +198,37 @@ function monitorMouseHit(e){e.preventDefault();e.stopPropagation();if(!monitorTa
 monitorTarget.addEventListener('pointerdown',monitorMouseHit);
 monitorTarget.addEventListener('click',monitorMouseHit);
 function handleMonitorData(m){
+  if(m.type==='phoneCalibrationPoint'){
+    if(!pcLatestThumb){
+      send({type:'phoneCalibrationAck',ok:false,message:'PCカメラで親指を認識できません。手をカメラに映してから、もう一度タップしてください。'});
+      return;
+    }
+    const i=Number(m.index);
+    if(!Number.isInteger(i)||i<0||i>2){
+      send({type:'phoneCalibrationAck',ok:false,message:'測定位置の情報が不正です。'});
+      return;
+    }
+    calibrationPoints[i]={cameraX:pcLatestThumb.x,cameraY:pcLatestThumb.y,targetX:Number(m.targetX),targetY:Number(m.targetY)};
+    $('calStatus').textContent=calibrationPoints.filter(Boolean).length+'/3点を記録（スマホ側）';
+    if(calibrationPoints.filter(Boolean).length===3){
+      try{
+        const a=calibrationPoints.map(p=>[p.cameraX,p.cameraY,1]);
+        const tx=solve3(a,calibrationPoints.map(p=>p.targetX));
+        const ty=solve3(a,calibrationPoints.map(p=>p.targetY));
+        calibrationTransform={x:tx,y:ty};
+        $('calStatus').textContent='完了：座標変換を適用中';
+        $('monitorStatus').textContent='スマホ側キャリブレーション完了。実験を開始できます。';
+      }catch(e){
+        calibrationTransform=null;
+        calibrationPoints[i]=null;
+        $('calStatus').textContent='失敗：測定位置を離して再実施してください';
+        send({type:'phoneCalibrationAck',ok:false,message:'測定位置の差が小さく、変換を計算できませんでした。手とカメラの位置を調整して再試行してください。'});
+        return;
+      }
+    }
+    send({type:'phoneCalibrationAck',ok:true,message:'記録しました'});
+    return;
+  }
   if(m.type==='experimentStart'){
     pcExperiment=m.questionnaire||{};pcExperiment.startedAt=m.startedAt||new Date().toISOString();
     pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];pcTargetHistory=[];$('pcDownloadButton').classList.add('hidden');$('trajectoryResults').classList.add('hidden');
@@ -425,7 +500,67 @@ function startGame(){score=0;reactionTimes=[];records=[];previousTargetCenter=nu
 function hitTarget(){if(!gameRunning)return;const tap=performance.now(),reaction=(tap-spawnTime)/1000;reactionTimes.push(reaction);score++;const r=game.getBoundingClientRect();const tx=parseFloat(target.style.left),ty=parseFloat(target.style.top);const center={x:tx/r.width,y:ty/r.height};const targetDistance=previousTargetCenter?Math.hypot(center.x-previousTargetCenter.x,center.y-previousTargetCenter.y):null;records.push({targetId,reactionTime:reaction,targetX:center.x,targetY:center.y,targetDistance,previousTargetX:previousTargetCenter?.x??null,previousTargetY:previousTargetCenter?.y??null,path:currentPath.slice(),pathPointCount:currentPath.length});previousTargetCenter=center;target.classList.add('hit');setTimeout(()=>target.classList.remove('hit'),70);send({type:'event',text:'TARGET #'+targetId+' HIT / reaction '+reaction.toFixed(3)+'s',record:records[records.length-1]});ui();generateTarget();}
 function checkTap(e){if(!gameRunning)return;const now=performance.now();if(now-lastTapTime<100)return;const p=e.touches?.[0]||e,r=target.getBoundingClientRect();if(p.clientX>=r.left&&p.clientX<=r.right&&p.clientY>=r.top&&p.clientY<=r.bottom){if(e.cancelable)e.preventDefault();lastTapTime=now;hitTarget()}}
 target.addEventListener('pointerdown',checkTap);target.addEventListener('click',checkTap);game.addEventListener('pointerdown',checkTap);game.addEventListener('click',checkTap);game.addEventListener('touchstart',checkTap,{passive:false});
-startButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();startGame()});
+startButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();beginPhoneCalibration()});
+$('phoneCalBegin').addEventListener('click',beginPhoneCalibration);
+$('phoneCalCancel').addEventListener('click',()=>{ $('phoneCalibration').classList.add('hidden');startCard.classList.remove('hidden');});
+$('phoneCalTarget').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();phoneCalibrationTap(e)});
+
+function beginPhoneCalibration(){
+  startCard.classList.add('hidden');
+  $('phoneCalibration').classList.remove('hidden');
+  phoneCalIndex=0;phoneCalWaiting=false;phoneCalDone=false;
+  $('phoneCalBegin').classList.add('hidden');
+  $('phoneCalCancel').textContent='中止';
+  $('phoneCalTitle').textContent='親指位置のキャリブレーション';
+  showPhoneCalTarget();
+}
+function showPhoneCalTarget(){
+  const t=phoneCalTargets[phoneCalIndex];
+  if(!t)return;
+  $('phoneCalInstruction').textContent=`${t.label}の点滅する範囲に、スマホを操作する親指を合わせてタップしてください。`;
+  $('phoneCalProgress').textContent=`測定 ${phoneCalIndex+1} / ${phoneCalTargets.length}`;
+  $('phoneCalTarget').style.left=(t.x*100)+'%';
+  $('phoneCalTarget').style.top=(t.y*100)+'%';
+  $('phoneCalStatus').textContent='PC側で親指が認識されていることを確認してからタップしてください。';
+  phoneCalWaiting=false;
+}
+function phoneCalibrationTap(e){
+  if(phoneCalIndex<0||phoneCalDone||phoneCalWaiting)return;
+  const stage=$('phoneCalStage').getBoundingClientRect();
+  const target=$('phoneCalTarget').getBoundingClientRect();
+  const cx=target.left+target.width/2,cy=target.top+target.height/2;
+  // Accept only a tap within the pulsing target.
+  if(Math.hypot(e.clientX-cx,e.clientY-cy)>Math.max(target.width,target.height)*.65){
+    $('phoneCalStatus').textContent='点滅している丸の範囲をタップしてください。';
+    return;
+  }
+  if(!conn||!conn.open){
+    $('phoneCalStatus').textContent='PCモニターが未接続です。PC側で6桁コードを入力して接続してください。';
+    return;
+  }
+  phoneCalWaiting=true;
+  const t=phoneCalTargets[phoneCalIndex];
+  send({type:'phoneCalibrationPoint',index:phoneCalIndex,targetX:t.x,targetY:t.y,label:t.label});
+  $('phoneCalStatus').textContent='親指位置を確認しています… PCカメラで親指が認識されている必要があります。';
+}
+function finishPhoneCalibration(){
+  phoneCalDone=true;phoneCalIndex=-1;
+  $('phoneCalTitle').textContent='キャリブレーション完了';
+  $('phoneCalInstruction').textContent='3か所の測定が完了しました。反射神経ゲームを開始できます。';
+  $('phoneCalProgress').textContent='完了 3 / 3';
+  $('phoneCalStatus').textContent='「ゲーム開始」を押すと20秒の実験が始まります。';
+  $('phoneCalTarget').style.display='none';
+  $('phoneCalButtons').innerHTML='<button id="phoneCalStartGame">ゲーム開始</button>';
+  $('phoneCalStartGame').addEventListener('click',()=>{
+    $('phoneCalibration').classList.add('hidden');
+    $('phoneCalTarget').style.display='flex';
+    $('phoneCalButtons').innerHTML='<button id="phoneCalBegin">キャリブレーション開始</button><button id="phoneCalCancel" class="secondary">戻る</button>';
+    $('phoneCalBegin').addEventListener('click',beginPhoneCalibration);
+    $('phoneCalCancel').addEventListener('click',()=>{$('phoneCalibration').classList.add('hidden');startCard.classList.remove('hidden');});
+    startGame();
+  });
+}
+
 restartButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();resultCard.classList.add('hidden');startCard.classList.remove('hidden')});
 
 function endGame(){if(!gameRunning)return;gameRunning=false;clearInterval(timerId);target.style.display='none';$('time').textContent='0';$('finalScore').textContent=score;$('finalAvg').textContent=avg().toFixed(2)+'s';$('finalLevel').textContent=level();resultCard.classList.remove('hidden');send({type:'event',text:'GAME END'});send({type:'state',time:0,score,reaction:avg(),level:level(),targetVisible:false,target:{id:targetId,x:0,y:0}});}
