@@ -19,11 +19,13 @@
 
 #phoneCalibration{position:absolute;inset:0;z-index:25;background:rgba(5,9,15,.98);display:flex;align-items:center;justify-content:center;padding:14px}
 #phoneCalibration.hidden{display:none!important}
-#phoneCalCard{position:relative;width:100%;height:100%;min-height:420px;max-height:760px;border:1px solid #334155;border-radius:18px;background:radial-gradient(circle at center,#172438,#080a0d 72%);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:22px 16px 16px;text-align:center}
+#phoneCalCard{position:relative;width:100%;height:100%;min-height:0;max-height:none;border:0;border-radius:0;background:radial-gradient(circle at center,#101b2d,#05070b 72%);overflow:hidden;display:flex;flex-direction:column;align-items:stretch;justify-content:stretch;padding:0;text-align:center}
 #phoneCalTitle{font-size:22px;margin:4px 0 8px}
 #phoneCalInstruction{font-size:15px;line-height:1.6;color:#e5edf8;max-width:520px;min-height:48px}
 #phoneCalProgress{font-size:12px;color:#93c5fd;margin:8px 0}
-#phoneCalStage{position:relative;flex:1;width:100%;min-height:220px;margin:8px 0;border:1px dashed #334155;border-radius:14px;background:rgba(15,23,42,.4);overflow:hidden}
+#phoneCalStage{position:absolute;inset:0;flex:none;width:100%;height:100%;min-height:0;margin:0;border:0;border-radius:0;background:transparent;overflow:hidden}
+/* キャリブレーション中は文字・進捗・ボタンを表示せず、点滅ターゲットだけを全画面に表示 */
+#phoneCalTitle,#phoneCalInstruction,#phoneCalProgress,#phoneCalStatus,#phoneCalButtons{display:none!important}
 #phoneCalTarget{position:absolute;width:84px;height:84px;border:3px solid #60a5fa;border-radius:50%;background:rgba(37,99,235,.18);transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;animation:calPulse 1s ease-in-out infinite;cursor:pointer;touch-action:manipulation}
 #phoneCalTarget:before{content:"";position:absolute;width:54px;height:54px;border-radius:50%;border:2px dashed #bfdbfe}
 #phoneCalTarget:after{content:"";position:absolute;width:22px;height:22px;border-radius:50%;background:#60a5fa;box-shadow:0 0 18px #3b82f6}
@@ -43,11 +45,9 @@ body.phone-mode #message{position:absolute;inset:0}
 body.phone-mode #questionnaire{position:absolute;inset:0;padding:12px;overflow-y:auto;overscroll-behavior:contain}
 body.phone-mode .question-card{width:100%;max-width:520px;max-height:calc(100dvh - 24px);padding:18px}
 body.phone-mode #phoneCalibration{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;padding:0;overflow:hidden}
-body.phone-mode #phoneCalCard{width:100%;height:100%;height:100dvh;min-height:0;max-height:none;border:0;border-radius:0;padding: max(18px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));}
-body.phone-mode #phoneCalStage{flex:1;min-height:0;margin:12px 0;border-radius:12px}
-body.phone-mode #phoneCalInstruction{font-size:clamp(15px,4vw,20px);min-height:0}
+body.phone-mode #phoneCalCard{width:100%;height:100%;height:100dvh;min-height:0;max-height:none;border:0;border-radius:0;padding:0}
+body.phone-mode #phoneCalStage{position:absolute;inset:0;width:100%;height:100%;margin:0;border:0;border-radius:0}
 body.phone-mode #phoneCalTarget{width:clamp(76px,20vw,96px);height:clamp(76px,20vw,96px)}
-body.phone-mode #phoneCalButtons{padding-bottom:env(safe-area-inset-bottom)}
 body.phone-mode #target{width:clamp(54px,14vw,68px);height:clamp(54px,14vw,68px)}
 body.phone-mode #result{max-height:calc(100dvh - 28px);overflow:auto}
 @media(max-width:1000px){.monitor-layout{grid-template-columns:1fr 1fr}}@media(max-width:700px){.monitor-layout{grid-template-columns:1fr}.mode-grid{grid-template-columns:1fr}.monitor-game{height:300px}#cameraPanel{width:130px}}
@@ -561,20 +561,10 @@ function phoneCalibrationTap(e){
 }
 function finishPhoneCalibration(){
   phoneCalDone=true;phoneCalIndex=-1;
-  $('phoneCalTitle').textContent='キャリブレーション完了';
-  $('phoneCalInstruction').textContent='3か所の測定が完了しました。反射神経ゲームを開始できます。';
-  $('phoneCalProgress').textContent='完了 3 / 3';
-  $('phoneCalStatus').textContent='「ゲーム開始」を押すと20秒の実験が始まります。';
-  $('phoneCalTarget').style.display='none';
-  $('phoneCalButtons').innerHTML='<button id="phoneCalStartGame">ゲーム開始</button>';
-  $('phoneCalStartGame').addEventListener('click',()=>{
-    $('phoneCalibration').classList.add('hidden');
-    $('phoneCalTarget').style.display='flex';
-    $('phoneCalButtons').innerHTML='<button id="phoneCalBegin">キャリブレーション開始</button><button id="phoneCalCancel" class="secondary">戻る</button>';
-    $('phoneCalBegin').addEventListener('click',beginPhoneCalibration);
-    $('phoneCalCancel').addEventListener('click',()=>{$('phoneCalibration').classList.add('hidden');startCard.classList.remove('hidden');});
-    startGame();
-  });
+  // 文字や完了ボタンは出さず、キャリブレーション直後にゲームへ移行する
+  $('phoneCalibration').classList.add('hidden');
+  $('phoneCalTarget').style.display='flex';
+  startGame();
 }
 
 restartButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();resultCard.classList.add('hidden');startCard.classList.remove('hidden')});
