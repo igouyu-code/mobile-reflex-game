@@ -106,7 +106,7 @@ body.phone-mode #result{max-height:calc(100dvh - 28px);overflow:auto}
   </div>
   <div id="message">
     <div id="startCard" class="card hidden"><h1>REFLEX GAME</h1><div id="startCodeBox" style="margin:14px 0;padding:14px;border-radius:12px;background:#171b22;border:2px solid #00d9ff;text-align:center"><div style="font-size:13px;color:#aaa">PCモニター接続用 6桁コード</div><div id="startPhoneCode" style="font-size:36px;font-weight:800;letter-spacing:7px;color:#00d9ff">------</div><div style="font-size:12px;color:#aaa;margin-top:5px">この数字をPCモニターに入力してください</div></div><p>赤いターゲットが表示されたら、できるだけ早くタップしてください。<br>制限時間は20秒です。</p><button id="startButton">START</button></div>
-    <div id="result" class="card hidden"><h1>RESULT</h1><p>SCORE</p><div id="finalScore" style="font-size:36px;font-weight:bold;color:#00e676">0</div><p>AVERAGE REACTION</p><div id="finalAvg" style="font-size:30px;color:#00d9ff">0.00s</div><p>LEVEL</p><div id="finalLevel" style="font-size:28px;color:#ff9800">BEGINNER</div><button id="downloadDataButton">実験データを保存（CSV）</button><button id="restartButton" class="secondary">PLAY AGAIN</button></div>
+    <div id="result" class="card hidden"><h1>RESULT</h1><p>SCORE</p><div id="finalScore" style="font-size:36px;font-weight:bold;color:#00e676">0</div><p>AVERAGE REACTION</p><div id="finalAvg" style="font-size:30px;color:#00d9ff">0.00s</div><p>タップ成功率</p><div id="finalAccuracy" style="font-size:28px;color:#00e676">--%</div><p id="finalTapDetail" style="font-size:13px">成功 0 / タップ 0 / ミス 0</p><p>LEVEL</p><div id="finalLevel" style="font-size:28px;color:#ff9800">BEGINNER</div><button id="downloadDataButton">実験データを保存（CSV）</button><button id="restartButton" class="secondary">PLAY AGAIN</button></div>
   </div>
 </div>
 <div id="hint">ターゲットをできるだけ速くタップ</div>
@@ -159,9 +159,9 @@ const monitorPanel=$('monitorPanel'), monitorGame=$('monitorGame'), monitorTarge
 const pcCamera=$('pcCamera'), pcCameraCanvas=$('pcCameraCanvas'), pcCameraStatus=$('pcCameraStatus'), pcThumbCoord=$('pcThumbCoord');
 let mode=null, peer=null, conn=null, handLandmarker=null, mediaStream=null, tracking=false, lastVideoTime=-1;
 let pcHandLandmarker=null, pcMediaStream=null, pcTracking=false, pcLastVideoTime=-1, pcPath=[], pcLastX=null, pcLastY=null;
-let score=0,reactionTimes=[],records=[],startTime=0,spawnTime=0,gameRunning=false,timerId=null,targetId=0,currentPath=[],lastThumb=null,lastPathSample=0,lastTapTime=0;
+let score=0,reactionTimes=[],records=[],startTime=0,spawnTime=0,gameRunning=false,timerId=null,targetId=0,currentPath=[],lastThumb=null,lastPathSample=0,lastTapTime=0,tapAttempts=0,missTaps=0,tapLog=[];
 let qData={}; let previousTargetCenter=null;
-let pcExperiment={}; let pcRecords=[]; let pcEvents=[]; let pcThumbSamples=[]; let pcTarget=null; let pcTargetHistory=[];
+let pcExperiment={}; let pcRecords=[]; let pcEvents=[]; let pcTapStats={attempts:0,success:0,miss:0,accuracy:0}; let pcThumbSamples=[]; let pcTarget=null; let pcTargetHistory=[];
 let pcLatestThumb=null, calibrationPoints=[], calibrationTransform=null, pcPhoneThumbSamples=[];
 const calibrationTargets=[{x:.1,y:.1},{x:.9,y:.1},{x:.1,y:.9}];
 const phoneCalTargets=[{x:.12,y:.84,label:'左下'},{x:.12,y:.16,label:'左上'},{x:.88,y:.84,label:'右下'}];
@@ -191,7 +191,7 @@ async function setupPeerPhone(){
   peer.on('error',e=>console.warn(e));
 }
 function handlePhoneCommand(m){
-  if(m&&m.type==='pcHit'){hitTarget();return;}
+  if(m&&m.type==='pcHit'){if(gameRunning){tapAttempts++;hitTarget();send({type:'tapStats',attempts:tapAttempts,success:score,miss:missTaps,accuracy:tapAttempts?score/tapAttempts:0});}return;}
   if(m&&m.type==='phoneCalibrationAck'){
     if(!phoneCalWaiting)return;
     phoneCalWaiting=false;
@@ -247,7 +247,7 @@ function handleMonitorData(m){
   }
   if(m.type==='experimentStart'){
     pcExperiment=m.questionnaire||{};pcExperiment.startedAt=m.startedAt||new Date().toISOString();
-    pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];pcTargetHistory=[];$('pcDownloadButton').classList.add('hidden');$('trajectoryResults').classList.add('hidden');
+    pcRecords=[];pcEvents=[];pcTapStats={attempts:0,success:0,miss:0,accuracy:0};pcThumbSamples=[];pcPhoneThumbSamples=[];pcTargetHistory=[];$('pcDownloadButton').classList.add('hidden');$('trajectoryResults').classList.add('hidden');
     $('monitorStatus').textContent='接続しました。実験データを受信中です。';
   } else if(m.type==='state'){
     $('mTime').textContent=m.time;$('mScore').textContent=m.score;$('mReaction').textContent=Number(m.reaction||0).toFixed(2)+'s';$('mLevel').textContent=m.level;
@@ -260,11 +260,14 @@ function handleMonitorData(m){
     $('mPathInfo').textContent=m.count+' points / Target #'+m.targetId;
     pathLine.setAttribute('points',m.path.map(p=>(p.x*100).toFixed(2)+','+(p.y*100).toFixed(2)).join(' '));
     pcPhoneThumbSamples.push({time:Date.now(),targetId:m.targetId,x:m.x,y:m.y});
+  } else if(m.type==='tapStats'){
+    pcTapStats={attempts:Number(m.attempts||0),success:Number(m.success||0),miss:Number(m.miss||0),accuracy:Number(m.accuracy||0)};
+    $('mTargetInfo').textContent='タップ成功 '+m.success+' / 試行 '+m.attempts+' / ミス '+m.miss+' / 成功率 '+(Number(m.accuracy||0)*100).toFixed(1)+'%';
   } else if(m.type==='event'){
     $('monitorStatus').textContent=m.text;
     pcEvents.push({time:new Date().toISOString(),text:m.text});
     if(m.record){pcRecords.push(m.record);}
-    if(m.text==='GAME START'){pcRecords=[];pcEvents=[];pcThumbSamples=[];pcPhoneThumbSamples=[];pcTargetHistory=[];pcPath=[];pcLastX=null;pcLastY=null;}
+    if(m.text==='GAME START'){pcRecords=[];pcEvents=[];pcTapStats={attempts:0,success:0,miss:0,accuracy:0};pcThumbSamples=[];pcPhoneThumbSamples=[];pcTargetHistory=[];pcPath=[];pcLastX=null;pcLastY=null;}
     if(m.text==='GAME END'){
       pathLine.setAttribute('points','');
       $('pcDownloadButton').classList.remove('hidden');
@@ -281,7 +284,7 @@ function pathMetrics(path){
   return {actualDistance:actual,idealDistance:ideal,meanLineError:err/path.length,efficiency:actual>0?(ideal/actual):''};
 }
 function downloadPcData(){
-  const rows=[['section','field','value'],['summary','started_at',pcExperiment.startedAt||''],...Object.entries(pcExperiment).filter(([k])=>k!=='startedAt').map(([k,v])=>['questionnaire',k,v]),['summary','target_count',pcRecords.length]];
+  const rows=[['section','field','value'],['summary','started_at',pcExperiment.startedAt||''],...Object.entries(pcExperiment).filter(([k])=>k!=='startedAt').map(([k,v])=>['questionnaire',k,v]),['summary','target_count',pcRecords.length],['summary','tap_attempts',pcTapStats.attempts],['summary','successful_taps',pcTapStats.success],['summary','miss_taps',pcTapStats.miss],['summary','tap_success_rate_percent',(pcTapStats.accuracy*100).toFixed(2)]];
   rows.push([]);rows.push(['target_id','reaction_time_sec','target_x','target_y','target_distance_normalized','path_point_count','thumb_path_json','actual_thumb_distance_norm','straight_thumb_distance_norm','mean_deviation_from_thumb_start_end_line_norm','movement_efficiency']);
   for(const r of pcRecords){const met=pathMetrics(r.path);rows.push([r.targetId,r.reactionTime,r.targetX,r.targetY,r.targetDistance??'',r.pathPointCount,JSON.stringify(r.path||[]),met.actualDistance,met.idealDistance,met.meanLineError,met.efficiency]);}
   rows.push([]);rows.push(['pc_camera_sample_time_ms','target_id','thumb_x_camera_norm','thumb_y_camera_norm','thumb_x_game_norm_calibrated','thumb_y_game_norm_calibrated','calibration_applied','hand']);
@@ -512,10 +515,42 @@ function questionnaireSubmit(e){e.preventDefault();e.stopPropagation();const req
 qButton.addEventListener('pointerdown',questionnaireSubmit);
 
 function generateTarget(){const r=game.getBoundingClientRect(),margin=48;const x=margin+Math.random()*Math.max(1,r.width-margin*2),y=margin+Math.random()*Math.max(1,r.height-margin*2);target.style.left=x+'px';target.style.top=y+'px';target.style.display='block';targetId++;currentPath=[];lastPathSample=0;spawnTime=performance.now();send({type:'state',time:Math.max(0,Math.ceil(GAME_DURATION-(spawnTime-startTime)/1000)),score,reaction:avg(),level:level(),targetVisible:true,target:{id:targetId,x:x/r.width,y:y/r.height}});}
-function startGame(){score=0;reactionTimes=[];records=[];previousTargetCenter=null;startTime=performance.now();gameRunning=true;send({type:'experimentStart',questionnaire:qData,startedAt:new Date().toISOString()});startCard.classList.add('hidden');resultCard.classList.add('hidden');if($('codeBox')) $('codeBox').style.display='none'; if($('startCodeBox')) $('startCodeBox').style.display='none';ui();send({type:'event',text:'GAME START'});generateTarget();clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
-function hitTarget(){if(!gameRunning)return;const tap=performance.now(),reaction=(tap-spawnTime)/1000;reactionTimes.push(reaction);score++;const r=game.getBoundingClientRect();const tx=parseFloat(target.style.left),ty=parseFloat(target.style.top);const center={x:tx/r.width,y:ty/r.height};const targetDistance=previousTargetCenter?Math.hypot(center.x-previousTargetCenter.x,center.y-previousTargetCenter.y):null;records.push({targetId,reactionTime:reaction,targetX:center.x,targetY:center.y,targetDistance,previousTargetX:previousTargetCenter?.x??null,previousTargetY:previousTargetCenter?.y??null,path:currentPath.slice(),pathPointCount:currentPath.length});previousTargetCenter=center;target.classList.add('hit');setTimeout(()=>target.classList.remove('hit'),70);send({type:'event',text:'TARGET #'+targetId+' HIT / reaction '+reaction.toFixed(3)+'s',record:records[records.length-1]});ui();generateTarget();}
-function checkTap(e){if(!gameRunning)return;const now=performance.now();if(now-lastTapTime<100)return;const p=e.touches?.[0]||e,r=target.getBoundingClientRect();if(p.clientX>=r.left&&p.clientX<=r.right&&p.clientY>=r.top&&p.clientY<=r.bottom){if(e.cancelable)e.preventDefault();lastTapTime=now;hitTarget()}}
-target.addEventListener('pointerdown',checkTap);target.addEventListener('click',checkTap);game.addEventListener('pointerdown',checkTap);game.addEventListener('click',checkTap);game.addEventListener('touchstart',checkTap,{passive:false});
+function startGame(){score=0;reactionTimes=[];records=[];tapAttempts=0;missTaps=0;tapLog=[];previousTargetCenter=null;startTime=performance.now();gameRunning=true;send({type:'experimentStart',questionnaire:qData,startedAt:new Date().toISOString()});startCard.classList.add('hidden');resultCard.classList.add('hidden');if($('codeBox')) $('codeBox').style.display='none'; if($('startCodeBox')) $('startCodeBox').style.display='none';ui();send({type:'event',text:'GAME START'});generateTarget();clearInterval(timerId);timerId=setInterval(()=>{ui();send({type:'state',time:$('time').textContent,score,reaction:avg(),level:level(),targetVisible:gameRunning,target:{id:targetId,x:parseFloat(target.style.left)/game.clientWidth,y:parseFloat(target.style.top)/game.clientHeight}});if(performance.now()-startTime>=GAME_DURATION*1000)endGame()},50)}
+function hitTarget(){
+  if(!gameRunning || target.style.display==='none')return;
+  const tap=performance.now(),reaction=(tap-spawnTime)/1000;
+  reactionTimes.push(reaction);score++;
+  const r=game.getBoundingClientRect(),tx=parseFloat(target.style.left),ty=parseFloat(target.style.top);
+  const center={x:tx/r.width,y:ty/r.height};
+  const targetDistance=previousTargetCenter?Math.hypot(center.x-previousTargetCenter.x,center.y-previousTargetCenter.y):null;
+  const record={targetId,reactionTime:reaction,targetX:center.x,targetY:center.y,targetDistance,previousTargetX:previousTargetCenter?.x??null,previousTargetY:previousTargetCenter?.y??null,path:currentPath.slice(),pathPointCount:currentPath.length,tapResult:'SUCCESS'};
+  records.push(record);previousTargetCenter=center;
+  tapLog.push({time:+((tap-startTime)/1000).toFixed(4),targetId,result:'SUCCESS',x:center.x,y:center.y});
+  send({type:'event',text:'TARGET #'+targetId+' HIT / reaction '+reaction.toFixed(3)+'s',record});
+  send({type:'tapStats',attempts:tapAttempts,success:score,miss:missTaps,accuracy:tapAttempts?score/tapAttempts:0});
+  target.classList.add('hit');setTimeout(()=>target.classList.remove('hit'),70);
+  ui();generateTarget();
+}
+function checkTap(e){
+  if(!gameRunning || target.style.display==='none')return;
+  if(e.cancelable)e.preventDefault();
+  e.stopPropagation();
+  const now=performance.now();
+  if(now-lastTapTime<120)return;
+  lastTapTime=now;tapAttempts++;
+  const p=e, r=target.getBoundingClientRect();
+  const inside=p.clientX>=r.left&&p.clientX<=r.right&&p.clientY>=r.top&&p.clientY<=r.bottom;
+  if(inside){
+    hitTarget();
+  }else{
+    missTaps++;
+    tapLog.push({time:+((now-startTime)/1000).toFixed(4),targetId,result:'MISS',x:+((p.clientX-game.getBoundingClientRect().left)/game.clientWidth).toFixed(5),y:+((p.clientY-game.getBoundingClientRect().top)/game.clientHeight).toFixed(5)});
+    send({type:'event',text:'TAP MISS / target #'+targetId});
+    send({type:'tapStats',attempts:tapAttempts,success:score,miss:missTaps,accuracy:tapAttempts?score/tapAttempts:0});
+    ui();
+  }
+}
+game.addEventListener('pointerdown',checkTap);
 startButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();beginPhoneCalibration()});
 $('phoneCalBegin').addEventListener('click',beginPhoneCalibration);
 $('phoneCalCancel').addEventListener('click',()=>{ $('phoneCalibration').classList.add('hidden');startCard.classList.remove('hidden');});
@@ -569,9 +604,9 @@ function finishPhoneCalibration(){
 
 restartButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();resultCard.classList.add('hidden');startCard.classList.remove('hidden')});
 
-function endGame(){if(!gameRunning)return;gameRunning=false;clearInterval(timerId);target.style.display='none';$('time').textContent='0';$('finalScore').textContent=score;$('finalAvg').textContent=avg().toFixed(2)+'s';$('finalLevel').textContent=level();resultCard.classList.remove('hidden');send({type:'event',text:'GAME END'});send({type:'state',time:0,score,reaction:avg(),level:level(),targetVisible:false,target:{id:targetId,x:0,y:0}});}
+function endGame(){if(!gameRunning)return;gameRunning=false;clearInterval(timerId);target.style.display='none';$('time').textContent='0';$('finalScore').textContent=score;$('finalAvg').textContent=avg().toFixed(2)+'s';$('finalAccuracy').textContent=(tapAttempts?score/tapAttempts*100:0).toFixed(1)+'%';$('finalTapDetail').textContent='成功 '+score+' / タップ '+tapAttempts+' / ミス '+missTaps;$('finalLevel').textContent=level();resultCard.classList.remove('hidden');send({type:'event',text:'GAME END'});send({type:'state',time:0,score,reaction:avg(),level:level(),targetVisible:false,target:{id:targetId,x:0,y:0}});}
 function pcCsvEscape(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
-function downloadData(){const rows=[['experiment','value'],['age',qData.ageGroup],['handedness',qData.handedness],['daily_game_time',qData.dailyGameTime],['smartphone_game_frequency',qData.smartphoneGameFrequency],['game_experience',qData.gameExperience],['favorite_game',qData.favoriteGame],['total_score',score],['average_reaction_sec',avg().toFixed(4)],['level',level()]];rows.push([]);rows.push(['target_id','reaction_time_sec','target_x','target_y','path_point_count','path_json']);for(const r of records)rows.push([r.targetId,r.reactionTime.toFixed(4),r.targetX.toFixed(5),r.targetY.toFixed(5),r.pathPointCount,JSON.stringify(r.path)]);const csv='\uFEFF'+rows.map(x=>x.map(csvEscape).join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='reflex_media_experiment_data.csv';document.body.appendChild(a);a.click();a.remove()}
+function downloadData(){const rows=[['experiment','value'],['age',qData.ageGroup],['handedness',qData.handedness],['daily_game_time',qData.dailyGameTime],['smartphone_game_frequency',qData.smartphoneGameFrequency],['game_experience',qData.gameExperience],['favorite_game',qData.favoriteGame],['total_score',score],['average_reaction_sec',avg().toFixed(4)],['tap_attempts',tapAttempts],['successful_taps',score],['miss_taps',missTaps],['tap_success_rate_percent',(tapAttempts?score/tapAttempts*100:0).toFixed(2)],['level',level()]];rows.push([]);rows.push(['target_id','reaction_time_sec','target_x','target_y','path_point_count','path_json']);for(const r of records)rows.push([r.targetId,r.reactionTime.toFixed(4),r.targetX.toFixed(5),r.targetY.toFixed(5),r.pathPointCount,JSON.stringify(r.path)]);rows.push([]);rows.push(['tap_time_sec','target_id','tap_result','tap_x_game_norm','tap_y_game_norm']);for(const t of tapLog)rows.push([t.time,t.targetId,t.result,t.x,t.y]);const csv='\uFEFF'+rows.map(x=>x.map(csvEscape).join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='reflex_media_experiment_data.csv';document.body.appendChild(a);a.click();a.remove()}
 downloadButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();downloadData()});
 
 $('monitorPanel').classList.add('hidden');
