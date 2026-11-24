@@ -25,7 +25,8 @@
 #phoneCalProgress{font-size:12px;color:#93c5fd;margin:8px 0}
 #phoneCalStage{position:absolute;inset:0;flex:none;width:100%;height:100%;min-height:0;margin:0;border:0;border-radius:0;background:transparent;overflow:hidden}
 /* キャリブレーション中は文字・進捗・ボタンを表示せず、点滅ターゲットだけを全画面に表示 */
-#phoneCalTitle,#phoneCalInstruction,#phoneCalProgress,#phoneCalStatus,#phoneCalButtons{display:none!important}
+#phoneCalTitle,#phoneCalInstruction,#phoneCalProgress,#phoneCalButtons{display:none!important}
+#phoneCalStatus{display:block!important;position:absolute;left:12px;right:12px;bottom:14px;z-index:5;margin:0;padding:7px 10px;border-radius:9px;background:rgba(0,0,0,.58);color:#dbeafe;font-size:11px;min-height:0;pointer-events:none}
 #phoneCalTarget{position:absolute;width:84px;height:84px;border:3px solid #60a5fa;border-radius:50%;background:rgba(37,99,235,.18);transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;animation:calPulse 1s ease-in-out infinite;cursor:pointer;touch-action:manipulation}
 #phoneCalTarget:before{content:"";position:absolute;width:54px;height:54px;border-radius:50%;border:2px dashed #bfdbfe}
 #phoneCalTarget:after{content:"";position:absolute;width:22px;height:22px;border-radius:50%;background:#60a5fa;box-shadow:0 0 18px #3b82f6}
@@ -165,7 +166,7 @@ let pcExperiment={}; let pcRecords=[]; let pcEvents=[]; let pcTapStats={attempts
 let pcLatestThumb=null, calibrationPoints=[], calibrationTransform=null, pcPhoneThumbSamples=[];
 const calibrationTargets=[{x:.1,y:.1},{x:.9,y:.1},{x:.1,y:.9}];
 const phoneCalTargets=[{x:.12,y:.84,label:'左下'},{x:.12,y:.16,label:'左上'},{x:.88,y:.84,label:'右下'}];
-let phoneCalIndex=-1,phoneCalWaiting=false,phoneCalDone=false;
+let phoneCalIndex=-1,phoneCalWaiting=false,phoneCalDone=false,phoneCalTimeout=null;
 
 
 function avg(){return reactionTimes.length?reactionTimes.reduce((a,b)=>a+b,0)/reactionTimes.length:0}
@@ -553,12 +554,13 @@ function checkTap(e){
 game.addEventListener('pointerdown',checkTap);
 startButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();beginPhoneCalibration()});
 $('phoneCalBegin').addEventListener('click',beginPhoneCalibration);
-$('phoneCalCancel').addEventListener('click',()=>{ $('phoneCalibration').classList.add('hidden');startCard.classList.remove('hidden');});
+$('phoneCalCancel').addEventListener('click',()=>{ if(phoneCalTimeout){clearTimeout(phoneCalTimeout);phoneCalTimeout=null;}phoneCalWaiting=false;$('phoneCalibration').classList.add('hidden');startCard.classList.remove('hidden');});
 $('phoneCalTarget').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();phoneCalibrationTap(e)});
 
 function beginPhoneCalibration(){
   startCard.classList.add('hidden');
   $('phoneCalibration').classList.remove('hidden');
+  if(phoneCalTimeout){clearTimeout(phoneCalTimeout);phoneCalTimeout=null;}
   phoneCalIndex=0;phoneCalWaiting=false;phoneCalDone=false;
   $('phoneCalBegin').classList.add('hidden');
   $('phoneCalCancel').textContent='中止';
@@ -592,10 +594,17 @@ function phoneCalibrationTap(e){
   phoneCalWaiting=true;
   const t=phoneCalTargets[phoneCalIndex];
   send({type:'phoneCalibrationPoint',index:phoneCalIndex,targetX:t.x,targetY:t.y,label:t.label});
-  $('phoneCalStatus').textContent='親指位置を確認しています… PCカメラで親指が認識されている必要があります。';
+  $('phoneCalStatus').textContent='PC側の親指認識を確認中…';
+  if(phoneCalTimeout)clearTimeout(phoneCalTimeout);
+  phoneCalTimeout=setTimeout(()=>{
+    if(!phoneCalWaiting)return;
+    phoneCalWaiting=false;phoneCalTimeout=null;
+    $('phoneCalStatus').textContent='PCから応答がありません。同じ位置をもう一度タップしてください。PCの接続とカメラ認識を確認してください。';
+  },5000);
 }
 function finishPhoneCalibration(){
-  phoneCalDone=true;phoneCalIndex=-1;
+  if(phoneCalTimeout){clearTimeout(phoneCalTimeout);phoneCalTimeout=null;}
+  phoneCalWaiting=false;phoneCalDone=true;phoneCalIndex=-1;
   // 文字や完了ボタンは出さず、キャリブレーション直後にゲームへ移行する
   $('phoneCalibration').classList.add('hidden');
   $('phoneCalTarget').style.display='flex';
